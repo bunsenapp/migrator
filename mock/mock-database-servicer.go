@@ -15,5 +15,5 @@ type MockDatabaseServicer struct {
 // ExecuteMigration calls the ExecuteMigrationFunc function and returns the
 // result.
 func (m MockDatabaseServicer) ExecuteMigration(mi migrator.Migration) (bool, error) {
-	return m.ExecuteMigration(mi)
+	return m.ExecuteMigrationFunc(mi)
 }
