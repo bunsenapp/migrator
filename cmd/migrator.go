@@ -1,10 +1,6 @@
-package main
+package cmd
 
-import (
-	"fmt"
-
-	"github.com/bunsenapp/migrator"
-)
+import "github.com/bunsenapp/migrator"
 
 // NewMigrator initialises a set up migrator that can be used without having
 // to manually construct dependencies.
@@ -24,9 +20,10 @@ type Migrator struct {
 }
 
 // Run is the entry point for the migrations.
-func (m Migrator) Run() {
+func (m Migrator) Run() error {
 	if err := m.Configuration.Validate(); err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
+
+	return nil
 }

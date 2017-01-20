@@ -2,8 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/bunsenapp/migrator"
+	"github.com/bunsenapp/migrator/cmd"
 )
 
 func main() {
@@ -27,8 +29,9 @@ func main() {
 		RollbacksDirectory:       rolDir,
 		Migration:                migration,
 	}
-	m := Migrator{
-		Configuration: config,
+
+	m := cmd.NewMigrator(config)
+	if err := m.Run(); err != nil {
+		fmt.Printf("[Migrator] - %s\n", err)
 	}
-	m.Run()
 }
