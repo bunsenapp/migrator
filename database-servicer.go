@@ -1,8 +1,7 @@
 package migrator
 
-// DatabaseServices is an interface that defines what all database servicers
-// must do.
+// DatabaseServicer represents a service that runs the migrations.
 type DatabaseServicer interface {
-	// ExecuteMigration executes a migration against an appropriate database.
-	ExecuteMigration(m Migration) (bool, error)
+	// RunMigration runs the specified migration against the current database.
+	RunMigration(m Migration) error
 }

@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/bunsenapp/migrator"
 	"github.com/bunsenapp/migrator/cmd"
+	"github.com/bunsenapp/migrator/mysql"
 )
 
 func main() {
@@ -23,15 +25,33 @@ func main() {
 	flag.Parse()
 
 	config := migrator.Configuration{
-		DatabaseTypeName:         dbType,
 		DatabaseConnectionString: conString,
 		MigrationsDirectory:      migDir,
 		RollbacksDirectory:       rolDir,
 		Migration:                migration,
 	}
 
-	m := cmd.NewMigrator(config)
-	if err := m.Run(); err != nil {
-		fmt.Printf("[Migrator] - %s\n", err)
+	var db migrator.DatabaseServicer
+	var err error
+	switch strings.ToLower(dbType) {
+	case "mysql":
+		db, err = mysql.NewMySQLDatabaseServicer(config.DatabaseConnectionString)
+		break
 	}
+	if err != nil {
+		printError(fmt.Errorf("database initialisation error: %e", err))
+	}
+
+	m, err := cmd.NewMigrator(config, db)
+	if err != nil {
+		printError(err)
+	}
+
+	if err := m.Run(); err != nil {
+		printError(err)
+	}
+}
+
+func printError(err error) {
+	fmt.Printf("[Migrator] - %s\n", err)
 }
