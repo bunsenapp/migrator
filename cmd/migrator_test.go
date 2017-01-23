@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -59,7 +58,6 @@ func TestErrorWhilstGettingFilesFromRollbackDirIsReturned(t *testing.T) {
 		DatabaseServicer: mock.MockDatabaseServicer{},
 	}
 	err := m.Run()
-	fmt.Println(err)
 	if _, ok := err.(migrator.ErrSearchingDir); !ok {
 		t.Errorf("error returned was not correct")
 	}
