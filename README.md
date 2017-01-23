@@ -1,5 +1,7 @@
 # migrator
 
+[![Build Status](https://travis-ci.org/bunsenapp/migrator.svg?branch=master)](https://travis-ci.org/bunsenapp/migrator)
+
 Migrator is a simple tool to aid the migration of databases. Inspired by how the
 folks over at StackOverflow manage migrations, you don't need to write any code
 for this, simply add your SQL scripts into a directory, configure Migrator 
