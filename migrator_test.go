@@ -8,14 +8,9 @@ func TestInvalidConfigurationResultsInAnError(t *testing.T) {
 	invalidConfigurations := []Configuration{
 		Configuration{},
 		Configuration{
-			DatabaseTypeName: "MyDatabase",
-		},
-		Configuration{
-			DatabaseTypeName:         "MyDatabase",
 			DatabaseConnectionString: "MyDatabaseConnectionString",
 		},
 		Configuration{
-			DatabaseTypeName:         "MyDatabase",
 			DatabaseConnectionString: "MyDatabaseConnectionString",
 			MigrationsDirectory:      "MyMigrationsDirectory",
 		},

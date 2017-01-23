@@ -1,5 +1,22 @@
 package migrator
 
+const (
+	// MySQL represents a MySQL database type.
+	MySQLDatabaseType = iota
+
+	// PostgreSQL represents a PostgreSQL database type.
+	PostgreSQLDatabaseType
+)
+
+// Migration is a representation of a migration that needs to run.
+type Migration struct {
+	// FileName is the file name of the migration.
+	FileName string
+
+	// FileContents is the contents of the migration to run.
+	FileContents string
+}
+
 // Configuration is an object where the configuration of migrator is stored.
 type Configuration struct {
 	// DatabaseConnectionString is the connection string where the migrations
