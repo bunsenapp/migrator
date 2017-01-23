@@ -26,8 +26,8 @@ func main() {
 
 	config := migrator.Configuration{
 		DatabaseConnectionString: conString,
-		MigrationsDirectory:      migDir,
-		RollbacksDirectory:       rolDir,
+		MigrationsDir:            migDir,
+		RollbacksDir:             rolDir,
 		Migration:                migration,
 	}
 

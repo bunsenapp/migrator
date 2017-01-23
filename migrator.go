@@ -23,13 +23,13 @@ type Configuration struct {
 	// will be ran against.
 	DatabaseConnectionString string
 
-	// MigrationsDirectory is the directory where the migration SQL scripts
+	// MigrationsDir is the directory where the migration SQL scripts
 	// are stored.
-	MigrationsDirectory string
+	MigrationsDir string
 
-	// RollbacksDirectory is the directory where the rollback SQL scripts
+	// RollbacksDir is the directory where the rollback SQL scripts
 	// are stored.
-	RollbacksDirectory string
+	RollbacksDir string
 
 	// Migration is the migration to run. If left blank, all migrations will
 	// be ran.
@@ -39,8 +39,7 @@ type Configuration struct {
 // Validate validates the configuration object ensuring it is ready to be used
 // within the Migrator application.
 func (c Configuration) Validate() error {
-	if c.DatabaseConnectionString == "" || c.MigrationsDirectory == "" ||
-		c.RollbacksDirectory == "" {
+	if c.DatabaseConnectionString == "" || c.MigrationsDir == "" || c.RollbacksDir == "" {
 		return ErrConfigurationInvalid
 	}
 

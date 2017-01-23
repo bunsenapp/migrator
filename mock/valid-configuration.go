@@ -6,7 +6,7 @@ import "github.com/bunsenapp/migrator"
 func ValidConfiguration() migrator.Configuration {
 	return migrator.Configuration{
 		DatabaseConnectionString: "my-database-connection-string",
-		MigrationsDirectory:      "my-migrations-directory",
-		RollbacksDirectory:       "my-rollbacks-directory",
+		MigrationsDir:            "my-migrations-directory",
+		RollbacksDir:             "my-rollbacks-directory",
 	}
 }

@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/bunsenapp/migrator"
@@ -24,9 +26,41 @@ func TestNotInitialisedDatabaseServicerResultsInError(t *testing.T) {
 	config := mock.ValidConfiguration()
 
 	m := Migrator{
-		Configuration: config,
+		Config: config,
 	}
 	if err := m.Run(); err == nil || err != migrator.ErrDbServicerNotInitialised {
 		t.Errorf("error returned was not correct.")
+	}
+}
+
+func TestErrorWhilstGettingFilesFromMigrationDirIsReturned(t *testing.T) {
+	config := mock.ValidConfiguration()
+
+	m := Migrator{
+		Config:           config,
+		DatabaseServicer: mock.MockDatabaseServicer{},
+	}
+	err := m.Run()
+	if _, ok := err.(migrator.ErrSearchingDir); !ok {
+		t.Errorf("error returned was not correct")
+	}
+}
+
+func TestErrorWhilstGettingFilesFromRollbackDirIsReturned(t *testing.T) {
+	config := mock.ValidConfiguration()
+	config.MigrationsDir = "migrationDirTest"
+	if err := os.Mkdir(config.MigrationsDir, 0700); err != nil {
+		t.Errorf("error occurred whilst creating test migration dir")
+	}
+	defer os.RemoveAll(config.MigrationsDir)
+
+	m := Migrator{
+		Config:           config,
+		DatabaseServicer: mock.MockDatabaseServicer{},
+	}
+	err := m.Run()
+	fmt.Println(err)
+	if _, ok := err.(migrator.ErrSearchingDir); !ok {
+		t.Errorf("error returned was not correct")
 	}
 }

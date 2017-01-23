@@ -12,7 +12,7 @@ func TestInvalidConfigurationResultsInAnError(t *testing.T) {
 		},
 		Configuration{
 			DatabaseConnectionString: "MyDatabaseConnectionString",
-			MigrationsDirectory:      "MyMigrationsDirectory",
+			MigrationsDir:            "MyMigrationsDirectory",
 		},
 	}
 	for _, i := range invalidConfigurations {
