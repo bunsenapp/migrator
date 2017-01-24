@@ -17,6 +17,10 @@ var (
 	// ErrNoMigrationsInDir is an error that is raised when the migrations directory
 	// does not have any migration scripts.
 	ErrNoMigrationsInDir = errors.New("no migration files in configured migrations dir")
+
+	// ErrNoRollbacksInDir is an error that is raised when the rollbacks directory does
+	// not have any rollback scripts.
+	ErrNoRollbacksInDir = errors.New("no rollback files in configured rollbacks dir")
 )
 
 // NewSearchingDirError creates a new instance of the ErrSearchingDir struct.

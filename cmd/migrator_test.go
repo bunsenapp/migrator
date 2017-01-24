@@ -77,11 +77,27 @@ func TestNoMigrationsResultsInAnError(t *testing.T) {
 	}
 }
 
+func TestNoRollbacksResultsInAnError(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationAndDirectories()
+	defer cleanUp()
+
+	os.Create(fmt.Sprintf("%s/my-first-migration.sql", config.MigrationsDir))
+
+	m := Migrator{
+		Config:           config,
+		DatabaseServicer: mock.MockDatabaseServicer{},
+	}
+	if err := m.Run(); err == nil || err != migrator.ErrNoRollbacksInDir {
+		t.Errorf("error returned was not correct")
+	}
+}
+
 func TestMigrationsWithoutRollbacksResultsInAnError(t *testing.T) {
 	config, cleanUp := mock.ValidConfigurationAndDirectories()
 	defer cleanUp()
 
 	os.Create(fmt.Sprintf("%s/my-first-migration.sql", config.MigrationsDir))
+	os.Create(fmt.Sprintf("%s/fake-rollback.sql", config.RollbacksDir))
 
 	m := Migrator{
 		Config:           config,
