@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 
 	"github.com/bunsenapp/migrator"
 )
@@ -42,14 +43,40 @@ func (m Migrator) Run() error {
 	if err != nil {
 		return migrator.NewSearchingDirError(m.Config.MigrationsDir, err)
 	}
-
 	rollbackFiles, err = ioutil.ReadDir(m.Config.RollbacksDir)
 	if err != nil {
 		return migrator.NewSearchingDirError(m.Config.RollbacksDir, err)
 	}
 
-	fmt.Println(migrationFiles)
-	fmt.Println(rollbackFiles)
+	if len(migrationFiles) == 0 {
+		return migrator.ErrNoMigrationsInDir
+	}
+
+	_, err = buildMigrationsFromFiles(migrationFiles, rollbackFiles)
+	if err != nil {
+		return err
+	}
 
 	return nil
+}
+
+func buildMigrationsFromFiles(ms []os.FileInfo, rs []os.FileInfo) ([]migrator.Migration, error) {
+	for _, m := range ms {
+		binSearch, rbFileName := matchRollbackFile(m, rs)
+		rbIndex := sort.Search(len(rs), binSearch)
+
+		if rbIndex >= len(rs) || rs[rbIndex].Name() != rbFileName {
+			return nil, migrator.NewMissingRollbackFileError(m.Name())
+		}
+	}
+
+	return nil, nil
+}
+
+func matchRollbackFile(m os.FileInfo, rbs []os.FileInfo) (func(int) bool, string) {
+	rbFileName := fmt.Sprintf("ROLLBACK-%s", m.Name())
+
+	return func(it int) bool {
+		return rbs[it].Name() == rbFileName
+	}, rbFileName
 }

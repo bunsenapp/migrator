@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -59,6 +60,35 @@ func TestErrorWhilstGettingFilesFromRollbackDirIsReturned(t *testing.T) {
 	}
 	err := m.Run()
 	if _, ok := err.(migrator.ErrSearchingDir); !ok {
+		t.Errorf("error returned was not correct")
+	}
+}
+
+func TestNoMigrationsResultsInAnError(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationAndDirectories()
+	defer cleanUp()
+
+	m := Migrator{
+		Config:           config,
+		DatabaseServicer: mock.MockDatabaseServicer{},
+	}
+	if err := m.Run(); err == nil || err != migrator.ErrNoMigrationsInDir {
+		t.Errorf("error returned was not correct")
+	}
+}
+
+func TestMigrationsWithoutRollbacksResultsInAnError(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationAndDirectories()
+	defer cleanUp()
+
+	os.Create(fmt.Sprintf("%s/my-first-migration.sql", config.MigrationsDir))
+
+	m := Migrator{
+		Config:           config,
+		DatabaseServicer: mock.MockDatabaseServicer{},
+	}
+	err := m.Run()
+	if _, ok := err.(migrator.ErrMissingRollbackFile); !ok {
 		t.Errorf("error returned was not correct")
 	}
 }
