@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/bunsenapp/migrator"
-	"github.com/bunsenapp/migrator/cmd"
+	"github.com/bunsenapp/migrator/cmd/migrator"
 	"github.com/bunsenapp/migrator/mysql"
 )
 
