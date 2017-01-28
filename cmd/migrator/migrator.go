@@ -37,7 +37,7 @@ func (m Migrator) Run() error {
 		return migrator.ErrDbServicerNotInitialised
 	}
 
-	migrationFiles, err := retrieveMigrations(m.Config.MigrationsDir, m.Config.RollbacksDir)
+	migrationFiles, err := findMigrations(m.Config.MigrationsDir, m.Config.RollbacksDir)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (m Migrator) Run() error {
 	return nil
 }
 
-func retrieveMigrations(migrationDir string, rollbackDir string) ([]migrator.Migration, error) {
+func findMigrations(migrationDir string, rollbackDir string) ([]migrator.Migration, error) {
 	migFiles, err := ioutil.ReadDir(migrationDir)
 	if err != nil {
 		return nil, migrator.NewSearchingDirError(migrationDir, err)
@@ -75,7 +75,7 @@ func retrieveMigrations(migrationDir string, rollbackDir string) ([]migrator.Mig
 			continue
 		}
 
-		rollback, err := findRollbackForMigration(fmt.Sprintf("%s_%s", fileNameParts[0], fileNameParts[1]), rollFiles)
+		rollback, err := findRollback(fmt.Sprintf("%s_%s", fileNameParts[0], fileNameParts[1]), rollFiles)
 		if err != nil {
 			return nil, err
 		}
@@ -96,7 +96,7 @@ func retrieveMigrations(migrationDir string, rollbackDir string) ([]migrator.Mig
 	return nil, nil
 }
 
-func findRollbackForMigration(migName string, rbs []os.FileInfo) (migrator.Rollback, error) {
+func findRollback(migName string, rbs []os.FileInfo) (migrator.Rollback, error) {
 	for _, r := range rbs {
 		rollbackNameParts := strings.Split(r.Name(), "_")
 		if len(rollbackNameParts) != 3 || !strings.Contains(strings.ToLower(rollbackNameParts[2]), "down") {
