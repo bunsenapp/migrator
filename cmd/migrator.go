@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/bunsenapp/migrator"
 )
@@ -35,48 +37,80 @@ func (m Migrator) Run() error {
 		return migrator.ErrDbServicerNotInitialised
 	}
 
-	var migrationFiles []os.FileInfo
-	var rollbackFiles []os.FileInfo
-
-	migrationFiles, err := ioutil.ReadDir(m.Config.MigrationsDir)
-	if err != nil {
-		return migrator.NewSearchingDirError(m.Config.MigrationsDir, err)
-	}
-	rollbackFiles, err = ioutil.ReadDir(m.Config.RollbacksDir)
-	if err != nil {
-		return migrator.NewSearchingDirError(m.Config.RollbacksDir, err)
-	}
-
-	if len(migrationFiles) == 0 {
-		return migrator.ErrNoMigrationsInDir
-	}
-	if len(rollbackFiles) == 0 {
-		return migrator.ErrNoRollbacksInDir
-	}
-
-	_, err = buildMigrationsFromFiles(migrationFiles, rollbackFiles)
+	migrationFiles, err := retrieveMigrations(m.Config.MigrationsDir, m.Config.RollbacksDir)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println(migrationFiles)
+
 	return nil
 }
 
-func buildMigrationsFromFiles(ms []os.FileInfo, rs []os.FileInfo) ([]migrator.Migration, error) {
-	for _, m := range ms {
-		rbFileName := fmt.Sprintf("ROLLBACK-%s", m.Name())
-		fRb := false
-		for _, r := range rs {
-			if r.Name() == rbFileName {
-				fRb = true
-				break
-			}
+func retrieveMigrations(migrationDir string, rollbackDir string) ([]migrator.Migration, error) {
+	migFiles, err := ioutil.ReadDir(migrationDir)
+	if err != nil {
+		return nil, migrator.NewSearchingDirError(migrationDir, err)
+	}
+	if len(migFiles) == 0 {
+		return nil, migrator.ErrNoMigrationsInDir
+	}
+
+	rollFiles, err := ioutil.ReadDir(rollbackDir)
+	if err != nil {
+		return nil, migrator.NewSearchingDirError(rollbackDir, err)
+	}
+	if len(rollFiles) == 0 {
+		return nil, migrator.ErrNoRollbacksInDir
+	}
+
+	migrations := make([]migrator.Migration, len(migFiles))
+
+	for _, m := range migFiles {
+		// Each migration/rollback file name should be of format:
+		// id_name_up/down.sql. If they are not, we should not include them.
+		fileNameParts := strings.Split(m.Name(), "_")
+
+		if len(fileNameParts) != 3 || !strings.Contains(strings.ToLower(fileNameParts[2]), "up") {
+			continue
 		}
 
-		if !fRb {
-			return nil, migrator.NewMissingRollbackFileError(m.Name())
+		rollback, err := findRollbackForMigration(fmt.Sprintf("%s_%s", fileNameParts[0], fileNameParts[1]), rollFiles)
+		if err != nil {
+			return nil, err
 		}
+
+		migrationId, err := strconv.Atoi(fileNameParts[0])
+		if err != nil {
+			return nil, migrator.NewInvalidMigrationIdError(m.Name(), err)
+		}
+
+		migration := migrator.Migration{
+			Id:       migrationId,
+			FileName: fileNameParts[1],
+			Rollback: rollback,
+		}
+		migrations[len(migrations)-1] = migration
 	}
 
 	return nil, nil
+}
+
+func findRollbackForMigration(migName string, rbs []os.FileInfo) (migrator.Rollback, error) {
+	for _, r := range rbs {
+		rollbackNameParts := strings.Split(r.Name(), "_")
+		if len(rollbackNameParts) != 3 || !strings.Contains(strings.ToLower(rollbackNameParts[2]), "down") {
+			continue
+		}
+
+		rollbackName := fmt.Sprintf("%s_%s", rollbackNameParts[0], rollbackNameParts[1])
+
+		if strings.ToLower(rollbackName) == strings.ToLower(migName) {
+			return migrator.Rollback{
+				FileName: r.Name(),
+			}, nil
+		}
+	}
+
+	return migrator.Rollback{}, migrator.NewMissingRollbackFileError(migName)
 }

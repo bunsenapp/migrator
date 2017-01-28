@@ -39,6 +39,15 @@ func NewMissingRollbackFileError(file string) error {
 	}
 }
 
+// NewInvalidMigrationIdError creates a new instance of the ErrInvalidMigrationId
+// struct.
+func NewInvalidMigrationIdError(migration string, err error) error {
+	return ErrInvalidMigrationId{
+		migration: migration,
+		err:       err,
+	}
+}
+
 // ErrSearchingDir is an error that is raised when the searching of a directory
 // fails.
 type ErrSearchingDir struct {
@@ -61,4 +70,17 @@ type ErrMissingRollbackFile struct {
 // Error yields the error string for the ErrMissingRollbackFile error struct.
 func (e ErrMissingRollbackFile) Error() string {
 	return fmt.Sprintf("failed to find rollback for migration: %s", e.file)
+}
+
+// ErrInvalidMigrationId is an error that is raised when the index on a migration
+// files does not successfully convert to an integer.
+type ErrInvalidMigrationId struct {
+	migration string
+	err       error
+}
+
+// Error yields the error string for the ErrInvalidMigrationId struct.
+func (e ErrInvalidMigrationId) Error() string {
+	return fmt.Sprintf("invalid migration id: %s, conversion yielded error: %s",
+		e.migration, e.err)
 }

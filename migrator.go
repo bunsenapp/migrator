@@ -10,10 +10,27 @@ const (
 
 // Migration is a representation of a migration that needs to run.
 type Migration struct {
+	// Id represents where the migration is in the order of those to be
+	// completed.
+	Id int
+
 	// FileName is the file name of the migration.
 	FileName string
 
 	// FileContents is the contents of the migration to run.
+	FileContents string
+
+	// Rollback is the rollback file for the current migration. There must
+	// always be one; otherwise an error will occurr.
+	Rollback Rollback
+}
+
+// Rollback is a rollback script related to a migration.
+type Rollback struct {
+	// FileName is the file name of the rollback.
+	FileName string
+
+	// FileContents is the contents of the associated rollback.
 	FileContents string
 }
 
