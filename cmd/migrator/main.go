@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/bunsenapp/migrator"
-	"github.com/bunsenapp/migrator/cmd/migrator"
 	"github.com/bunsenapp/migrator/mysql"
 )
 
@@ -42,7 +41,7 @@ func main() {
 		printError(fmt.Errorf("database initialisation error: %e", err))
 	}
 
-	m, err := cmd.NewMigrator(config, db)
+	m, err := NewMigrator(config, db)
 	if err != nil {
 		printError(err)
 	}
