@@ -18,7 +18,7 @@ type Migration struct {
 	FileName string
 
 	// FileContents is the contents of the migration to run.
-	FileContents string
+	FileContents []byte
 
 	// Rollback is the rollback file for the current migration. There must
 	// always be one; otherwise an error will occurr.
@@ -31,7 +31,7 @@ type Rollback struct {
 	FileName string
 
 	// FileContents is the contents of the associated rollback.
-	FileContents string
+	FileContents []byte
 }
 
 // Configuration is an object where the configuration of migrator is stored.

@@ -15,13 +15,21 @@ func NewMySQLDatabaseServicer(cs string) (migrator.DatabaseServicer, error) {
 		return nil, err
 	}
 
-	return mySqlDatabaseServicer{db: db}, nil
+	return mysqlDbServicer{db: db}, nil
 }
 
-type mySqlDatabaseServicer struct {
+type mysqlDbServicer struct {
 	db *sql.DB
 }
 
-func (db mySqlDatabaseServicer) RunMigration(m migrator.Migration) error {
+func (db mysqlDbServicer) RunMigration(m migrator.Migration) error {
+	return nil
+}
+
+func (db mysqlDbServicer) BeginTransaction() error {
+	return nil
+}
+
+func (db mysqlDbServicer) EndTransaction() error {
 	return nil
 }

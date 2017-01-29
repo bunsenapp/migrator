@@ -2,6 +2,15 @@ package migrator
 
 // DatabaseServicer represents a service that runs the migrations.
 type DatabaseServicer interface {
+	// BeginTransaction creates a transaction in the implementing database
+	// servicer.
+	BeginTransaction() error
+
+	// EndTransaction ends the created transaction providing there is one.
+	// If any errors have occurred, the transaction will be rolled back, otherwise,
+	// it will be committed.
+	EndTransaction() error
+
 	// RunMigration runs the specified migration against the current database.
 	RunMigration(m Migration) error
 }

@@ -48,6 +48,14 @@ func NewInvalidMigrationIdError(migration string, err error) error {
 	}
 }
 
+// NewReadFileError creates a new instance of the ErrReadingFile struct.
+func NewReadFileError(file string, err error) error {
+	return ErrReadingFile{
+		file: file,
+		err:  err,
+	}
+}
+
 // ErrSearchingDir is an error that is raised when the searching of a directory
 // fails.
 type ErrSearchingDir struct {
@@ -83,4 +91,16 @@ type ErrInvalidMigrationId struct {
 func (e ErrInvalidMigrationId) Error() string {
 	return fmt.Sprintf("invalid migration id: %s, conversion yielded error: %s",
 		e.migration, e.err)
+}
+
+// ErrReadingFile is an error that is raised when the application is unable to
+// read a migration/rollback file.
+type ErrReadingFile struct {
+	file string
+	err  error
+}
+
+// Error yields the error string for the ErrReadingFile struct.
+func (e ErrReadingFile) Error() string {
+	return fmt.Sprintf("error reading file %s: %s", e.file, e.err)
 }

@@ -45,7 +45,7 @@ func (m Migrator) Run() error {
 		return migrator.ErrDbServicerNotInitialised
 	}
 
-	migrationFiles, err := m.findMigrations(m.Config.MigrationsDir, m.Config.RollbacksDir)
+	migrationFiles, err := m.findMigrations()
 	if err != nil {
 		return err
 	}
@@ -55,18 +55,18 @@ func (m Migrator) Run() error {
 	return nil
 }
 
-func (m Migrator) findMigrations(migrationDir string, rollbackDir string) ([]migrator.Migration, error) {
-	migFiles, err := ioutil.ReadDir(migrationDir)
+func (m Migrator) findMigrations() ([]migrator.Migration, error) {
+	migFiles, err := ioutil.ReadDir(m.Config.MigrationsDir)
 	if err != nil {
-		return nil, migrator.NewSearchingDirError(migrationDir, err)
+		return nil, migrator.NewSearchingDirError(m.Config.MigrationsDir, err)
 	}
 	if len(migFiles) == 0 {
 		return nil, migrator.ErrNoMigrationsInDir
 	}
 
-	rollFiles, err := ioutil.ReadDir(rollbackDir)
+	rollFiles, err := ioutil.ReadDir(m.Config.RollbacksDir)
 	if err != nil {
-		return nil, migrator.NewSearchingDirError(rollbackDir, err)
+		return nil, migrator.NewSearchingDirError(m.Config.RollbacksDir, err)
 	}
 	if len(rollFiles) == 0 {
 		return nil, migrator.ErrNoRollbacksInDir
@@ -94,10 +94,16 @@ func (m Migrator) findMigrations(migrationDir string, rollbackDir string) ([]mig
 			return nil, migrator.NewInvalidMigrationIdError(migration.Name(), err)
 		}
 
+		file, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", m.Config.MigrationsDir, migration.Name()))
+		if err != nil {
+			return nil, migrator.NewReadFileError(migration.Name(), err)
+		}
+
 		migration := migrator.Migration{
-			Id:       migrationId,
-			FileName: migration.Name(),
-			Rollback: rollback,
+			Id:           migrationId,
+			FileName:     migration.Name(),
+			FileContents: file,
+			Rollback:     rollback,
 		}
 		migrations[len(migrations)-1] = migration
 	}
@@ -113,11 +119,16 @@ func (m Migrator) findRollback(migName string, rbs []os.FileInfo) (migrator.Roll
 			continue
 		}
 
-		rollbackName := fmt.Sprintf("%s_%s", rollbackNameParts[0], rollbackNameParts[1])
+		file, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", m.Config.RollbacksDir, r.Name()))
+		if err != nil {
+			return migrator.Rollback{}, migrator.NewReadFileError(r.Name(), err)
+		}
 
+		rollbackName := fmt.Sprintf("%s_%s", rollbackNameParts[0], rollbackNameParts[1])
 		if strings.ToLower(rollbackName) == strings.ToLower(migName) {
 			return migrator.Rollback{
-				FileName: r.Name(),
+				FileName:     r.Name(),
+				FileContents: file,
 			}, nil
 		}
 	}
