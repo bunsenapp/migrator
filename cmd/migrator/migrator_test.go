@@ -120,3 +120,18 @@ func TestMigrationsWithAnInvalidIdResultsInAnError(t *testing.T) {
 		t.Errorf("error returned was not correct")
 	}
 }
+
+func TestMigrationHistoryTableIsAlwaysAttemptedToBeCreated(t *testing.T) {
+}
+
+func TestIfMigrationHasAlreadyBeenDeployedItIsNotRanInAgain(t *testing.T) {
+}
+
+func TestIfMigrationHasNotBeenDeployedItIsRanIn(t *testing.T) {
+}
+
+func TestYouCannotRollbackANotLatestMigration(t *testing.T) {
+}
+
+func TestYouCanRollbackTheLatestMigration(t *testing.T) {
+}

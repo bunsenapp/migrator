@@ -15,20 +15,22 @@ func main() {
 	var conString string
 	var migDir string
 	var rolDir string
-	var migration string
 
-	flag.StringVar(&dbType, "type", "", "the type of database you're connecting to (MySQL, MsSQL, PostgreSQL)")
-	flag.StringVar(&conString, "connection-string", "", "The connection string of the database to run the migrations on")
-	flag.StringVar(&migDir, "migration-dir", "", "The directory where the migration scripts are stored.")
-	flag.StringVar(&rolDir, "rollback-dir", "", "The directory where the rollback scripts are stored.")
-	flag.StringVar(&migration, "migration", "", "Optional - the migration to run. If left blank or not called, all migrations will be attempted to be ran.")
-	flag.Parse()
+	migrateCommand := flag.NewFlagSet("migrate", flag.ExitOnError)
+	migrateCommand.StringVar(&dbType, "type", "", "the type of database you're connecting to (MySQL, MsSQL, PostgreSQL)")
+	migrateCommand.StringVar(&conString, "connection-string", "", "The connection string of the database to run the migrations on")
+	migrateCommand.StringVar(&migDir, "migration-dir", "", "The directory where the migration scripts are stored.")
+	migrateCommand.StringVar(&rolDir, "rollback-dir", "", "The directory where the rollback scripts are stored.")
+
+	switch os.Args[1] {
+	case "migrate":
+		migrateCommand.Parse(os.Args[2:])
+	}
 
 	config := migrator.Configuration{
 		DatabaseConnectionString: conString,
 		MigrationsDir:            migDir,
 		RollbacksDir:             rolDir,
-		Migration:                migration,
 	}
 
 	logger := log.New(os.Stdout, "[Migrator] ", 1)

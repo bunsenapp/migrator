@@ -48,9 +48,9 @@ type Configuration struct {
 	// are stored.
 	RollbacksDir string
 
-	// Migration is the migration to run. If left blank, all migrations will
-	// be ran.
-	Migration string
+	// MigrationToRollback is the migration that needs to be rolled back. This
+	// is useful when a development mistake may have been made.
+	MigrationToRollback string
 }
 
 // Validate validates the configuration object ensuring it is ready to be used
