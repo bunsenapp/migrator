@@ -31,7 +31,7 @@ func main() {
 		Migration:                migration,
 	}
 
-	logger := log.New(os.Stdout, "Migrator", 1)
+	logger := log.New(os.Stdout, "[Migrator] ", 1)
 
 	var db migrator.DatabaseServicer
 	var err error

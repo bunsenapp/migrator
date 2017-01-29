@@ -50,7 +50,7 @@ func (m Migrator) Run() error {
 		return err
 	}
 
-	m.LogServicer.Printf("located %s migration files", len(migrationFiles))
+	m.LogServicer.Printf("located %d migration files", len(migrationFiles))
 
 	return nil
 }
@@ -79,7 +79,7 @@ func (m Migrator) findMigrations(migrationDir string, rollbackDir string) ([]mig
 		// id_name_up/down.sql. If they are not, we should not include them.
 		fileNameParts := strings.Split(migration.Name(), "_")
 
-		if len(fileNameParts) != 3 || !strings.Contains(strings.ToLower(fileNameParts[2]), "up") {
+		if len(fileNameParts) != 3 || removeFileExtension(fileNameParts[2]) != "up" {
 			m.LogServicer.Printf("skipping file %s, does not have an appropriate file name\n", migration.Name())
 			continue
 		}
@@ -108,7 +108,7 @@ func (m Migrator) findMigrations(migrationDir string, rollbackDir string) ([]mig
 func (m Migrator) findRollback(migName string, rbs []os.FileInfo) (migrator.Rollback, error) {
 	for _, r := range rbs {
 		rollbackNameParts := strings.Split(r.Name(), "_")
-		if len(rollbackNameParts) != 3 || !strings.Contains(strings.ToLower(rollbackNameParts[2]), "down") {
+		if len(rollbackNameParts) != 3 || removeFileExtension(rollbackNameParts[2]) != "down" {
 			m.LogServicer.Printf("skipping file %s, does not have an appropriate file name\n", r.Name())
 			continue
 		}
@@ -123,4 +123,13 @@ func (m Migrator) findRollback(migName string, rbs []os.FileInfo) (migrator.Roll
 	}
 
 	return migrator.Rollback{}, migrator.NewMissingRollbackFileError(migName)
+}
+
+func removeFileExtension(fp string) string {
+	fileParts := strings.Split(fp, ".")
+	if len(fileParts) > 0 {
+		return strings.ToLower(fileParts[0])
+	}
+
+	return fp
 }
