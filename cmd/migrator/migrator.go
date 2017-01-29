@@ -11,11 +11,14 @@ import (
 )
 
 // NewMigrator initialises a set up migrator that can be used without having
-// to manually construct dependencies.
-func NewMigrator(config migrator.Configuration, db migrator.DatabaseServicer) (Migrator, error) {
+// to manually construct dependencies. You must inject a LogServicer implementation
+// into this function. You will be able to use most logging libraries with it.
+func NewMigrator(config migrator.Configuration, db migrator.DatabaseServicer,
+	logger migrator.LogServicer) (Migrator, error) {
 	return Migrator{
 		Config:           config,
 		DatabaseServicer: db,
+		LogServicer:      logger,
 	}, nil
 }
 
@@ -26,6 +29,11 @@ type Migrator struct {
 
 	// DatabaseServicer is the service that performs all database operations.
 	DatabaseServicer migrator.DatabaseServicer
+
+	// LogServicer is the service that will perform all logging routines.
+	// This abstraction exists only to decouple the application from the
+	// implementation of log.Logger.
+	LogServicer migrator.LogServicer
 }
 
 // Run is the entry point for the migrations.
@@ -37,17 +45,17 @@ func (m Migrator) Run() error {
 		return migrator.ErrDbServicerNotInitialised
 	}
 
-	migrationFiles, err := findMigrations(m.Config.MigrationsDir, m.Config.RollbacksDir)
+	migrationFiles, err := m.findMigrations(m.Config.MigrationsDir, m.Config.RollbacksDir)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(migrationFiles)
+	m.LogServicer.Printf("located %s migration files", len(migrationFiles))
 
 	return nil
 }
 
-func findMigrations(migrationDir string, rollbackDir string) ([]migrator.Migration, error) {
+func (m Migrator) findMigrations(migrationDir string, rollbackDir string) ([]migrator.Migration, error) {
 	migFiles, err := ioutil.ReadDir(migrationDir)
 	if err != nil {
 		return nil, migrator.NewSearchingDirError(migrationDir, err)
@@ -66,40 +74,42 @@ func findMigrations(migrationDir string, rollbackDir string) ([]migrator.Migrati
 
 	migrations := make([]migrator.Migration, len(migFiles))
 
-	for _, m := range migFiles {
+	for _, migration := range migFiles {
 		// Each migration/rollback file name should be of format:
 		// id_name_up/down.sql. If they are not, we should not include them.
-		fileNameParts := strings.Split(m.Name(), "_")
+		fileNameParts := strings.Split(migration.Name(), "_")
 
 		if len(fileNameParts) != 3 || !strings.Contains(strings.ToLower(fileNameParts[2]), "up") {
+			m.LogServicer.Printf("skipping file %s, does not have an appropriate file name\n", migration.Name())
 			continue
 		}
 
-		rollback, err := findRollback(fmt.Sprintf("%s_%s", fileNameParts[0], fileNameParts[1]), rollFiles)
+		rollback, err := m.findRollback(fmt.Sprintf("%s_%s", fileNameParts[0], fileNameParts[1]), rollFiles)
 		if err != nil {
 			return nil, err
 		}
 
 		migrationId, err := strconv.Atoi(fileNameParts[0])
 		if err != nil {
-			return nil, migrator.NewInvalidMigrationIdError(m.Name(), err)
+			return nil, migrator.NewInvalidMigrationIdError(migration.Name(), err)
 		}
 
 		migration := migrator.Migration{
 			Id:       migrationId,
-			FileName: fileNameParts[1],
+			FileName: migration.Name(),
 			Rollback: rollback,
 		}
 		migrations[len(migrations)-1] = migration
 	}
 
-	return nil, nil
+	return migrations, nil
 }
 
-func findRollback(migName string, rbs []os.FileInfo) (migrator.Rollback, error) {
+func (m Migrator) findRollback(migName string, rbs []os.FileInfo) (migrator.Rollback, error) {
 	for _, r := range rbs {
 		rollbackNameParts := strings.Split(r.Name(), "_")
 		if len(rollbackNameParts) != 3 || !strings.Contains(strings.ToLower(rollbackNameParts[2]), "down") {
+			m.LogServicer.Printf("skipping file %s, does not have an appropriate file name\n", r.Name())
 			continue
 		}
 

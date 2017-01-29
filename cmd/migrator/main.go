@@ -2,7 +2,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
+	"os"
 	"strings"
 
 	"github.com/bunsenapp/migrator"
@@ -30,6 +31,8 @@ func main() {
 		Migration:                migration,
 	}
 
+	logger := log.New(os.Stdout, "Migrator", 1)
+
 	var db migrator.DatabaseServicer
 	var err error
 	switch strings.ToLower(dbType) {
@@ -38,19 +41,15 @@ func main() {
 		break
 	}
 	if err != nil {
-		printError(fmt.Errorf("database initialisation error: %e", err))
+		logger.Printf("database initialisation error: %e", err)
 	}
 
-	m, err := NewMigrator(config, db)
+	m, err := NewMigrator(config, db, logger)
 	if err != nil {
-		printError(err)
+		logger.Printf("error creating migrator instance: %s\n", err)
 	}
 
 	if err := m.Run(); err != nil {
-		printError(err)
+		logger.Printf("error during migration run: %s\n", err)
 	}
-}
-
-func printError(err error) {
-	fmt.Printf("[Migrator] - %s\n", err)
 }
