@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/bunsenapp/migrator"
@@ -31,6 +32,27 @@ func ValidConfigurationAndDirectories() (migrator.Configuration, func()) {
 		os.RemoveAll(config.MigrationsDir)
 		os.RemoveAll(config.RollbacksDir)
 	}
+
+	return config, cleanup
+}
+
+func ValidConfigurationDirectoriesAndFiles() (migrator.Configuration, func()) {
+	config := migrator.Configuration{
+		DatabaseConnectionString: "my-connection-string",
+		MigrationsDir:            "my-migrations-directory",
+		RollbacksDir:             "my-rollbacks-directory",
+	}
+
+	os.Mkdir(config.MigrationsDir, 0700)
+	os.Mkdir(config.RollbacksDir, 0700)
+
+	cleanup := func() {
+		os.RemoveAll(config.MigrationsDir)
+		os.RemoveAll(config.RollbacksDir)
+	}
+
+	os.Create(fmt.Sprintf("%s/1_first-migration_up.sql", config.MigrationsDir))
+	os.Create(fmt.Sprintf("%s/1_first-migration_down.sql", config.RollbacksDir))
 
 	return config, cleanup
 }

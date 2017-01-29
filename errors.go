@@ -21,6 +21,10 @@ var (
 	// ErrNoRollbacksInDir is an error that is raised when the rollbacks directory does
 	// not have any rollback scripts.
 	ErrNoRollbacksInDir = errors.New("no rollback files in configured rollbacks dir")
+
+	// ErrUnableToRetrieveRanMigrations is an error that is raised when the
+	// migration history table cannot be queried.
+	ErrUnableToRetrieveRanMigrations = errors.New("unable to retrieve ran migrations")
 )
 
 // NewSearchingDirError creates a new instance of the ErrSearchingDir struct.
@@ -53,6 +57,14 @@ func NewReadFileError(file string, err error) error {
 	return ErrReadingFile{
 		file: file,
 		err:  err,
+	}
+}
+
+// NewCreatingHistoryTableError creates a new instance of the ErrCreatingHistoryTable
+// struct.
+func NewCreatingHistoryTableError(err error) error {
+	return ErrCreatingHistoryTable{
+		err: err,
 	}
 }
 
@@ -103,4 +115,15 @@ type ErrReadingFile struct {
 // Error yields the error string for the ErrReadingFile struct.
 func (e ErrReadingFile) Error() string {
 	return fmt.Sprintf("error reading file %s: %s", e.file, e.err)
+}
+
+// ErrCreatingHistoryTable is an error that is raised when the application is
+// unable to create the migration history table.
+type ErrCreatingHistoryTable struct {
+	err error
+}
+
+// Error yields the error string for the ErrCreatingHistoryTable struct.
+func (e ErrCreatingHistoryTable) Error() string {
+	return fmt.Sprintf("error creating migration history table: %s", e.err)
 }

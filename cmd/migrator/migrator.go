@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -49,8 +50,31 @@ func (m Migrator) Run() error {
 	if err != nil {
 		return err
 	}
-
 	m.LogServicer.Printf("located %d migration files", len(migrationFiles))
+
+	// Now we have the migration files, create the history table if it is
+	// not there already.
+	h, err := m.DatabaseServicer.TryCreateHistoryTable()
+	if err != nil {
+		return migrator.NewCreatingHistoryTableError(err)
+	}
+	if h {
+		m.LogServicer.Printf("created migration history table")
+	}
+
+	// Sort the migration files by their ids.
+	sort.Sort(migrations(migrationFiles))
+
+	ranMigrations, err := m.DatabaseServicer.RanMigrations()
+	if err != nil {
+		return migrator.ErrUnableToRetrieveRanMigrations
+	}
+
+	for _, migration := range migrationFiles {
+		if !migrationRan(ranMigrations, migration) {
+			m.DatabaseServicer.RunMigration(migration)
+		}
+	}
 
 	return nil
 }
@@ -143,4 +167,28 @@ func removeFileExtension(fp string) string {
 	}
 
 	return fp
+}
+
+type migrations []migrator.Migration
+
+func (m migrations) Len() int {
+	return len(m)
+}
+
+func (m migrations) Less(i, j int) bool {
+	return m[i].Id < m[j].Id
+}
+
+func (m migrations) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+}
+
+func migrationRan(r []migrator.RanMigration, m migrator.Migration) bool {
+	for _, i := range r {
+		if i.FileName == m.FileName {
+			return true
+		}
+	}
+
+	return false
 }

@@ -11,8 +11,16 @@ type DatabaseServicer interface {
 	// it will be committed.
 	EndTransaction() error
 
+	// RanMigrations retrieves all previously ran migrations.
+	RanMigrations() ([]RanMigration, error)
+
 	// RunMigration runs the specified migration against the current database.
 	RunMigration(m Migration) error
+
+	// TryCreateHistoryTable creates the migration history table if it does
+	// not already exist. The boolean return value indicates whether or not
+	// the table had to be created.
+	TryCreateHistoryTable() (bool, error)
 }
 
 // LogServicer abstracts common logging functions so we do not have to

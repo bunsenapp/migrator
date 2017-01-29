@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -116,15 +117,83 @@ func TestMigrationsWithAnInvalidIdResultsInAnError(t *testing.T) {
 	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
 	err := m.Run()
 	if _, ok := err.(migrator.ErrInvalidMigrationId); !ok {
-		fmt.Println(err)
 		t.Errorf("error returned was not correct")
 	}
 }
 
 func TestMigrationHistoryTableIsAlwaysAttemptedToBeCreated(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	callMade := false
+	createHistoryTableFunc := func() (bool, error) {
+		callMade = true
+		return true, nil
+	}
+
+	db := mock.MockDatabaseServicer{
+		TryCreateHistoryTableFunc: createHistoryTableFunc,
+		RanMigrationsFunc: func() ([]migrator.RanMigration, error) {
+			return []migrator.RanMigration{
+				migrator.RanMigration{},
+			}, nil
+		},
+		RunMigrationFunc: func(m migrator.Migration) error { return nil },
+	}
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	m.Run()
+
+	if !callMade {
+		t.Errorf("call to create history table was not made")
+	}
+}
+
+func TestErrorWhilstCreatingMigrationHistoryTableIsReturned(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	createHistoryTableFunc := func() (bool, error) {
+		return false, migrator.NewCreatingHistoryTableError(errors.New("foobar"))
+	}
+
+	db := mock.MockDatabaseServicer{TryCreateHistoryTableFunc: createHistoryTableFunc}
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+
+	err := m.Run()
+	if _, ok := err.(migrator.ErrCreatingHistoryTable); !ok {
+		t.Errorf("error returned was not correct")
+	}
 }
 
 func TestIfMigrationHasAlreadyBeenDeployedItIsNotRanInAgain(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	migrations := make([]string, 10)
+
+	createHistoryTableFunc := func() (bool, error) {
+		return true, nil
+	}
+	ranMigrationsFunc := func() ([]migrator.RanMigration, error) {
+		return []migrator.RanMigration{
+			migrator.RanMigration{
+				FileName: "1_first-migration_up.sql",
+			},
+		}, nil
+	}
+
+	db := mock.MockDatabaseServicer{
+		TryCreateHistoryTableFunc: createHistoryTableFunc,
+		RanMigrationsFunc:         ranMigrationsFunc,
+	}
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	m.Run()
+
+	for _, r := range migrations {
+		if r == "1_first-migration_up.sql" {
+			t.Errorf("migration ran when it shouldn't have been")
+		}
+	}
 }
 
 func TestIfMigrationHasNotBeenDeployedItIsRanIn(t *testing.T) {

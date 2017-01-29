@@ -1,5 +1,7 @@
 package migrator
 
+import "time"
+
 const (
 	// MySQL represents a MySQL database type.
 	MySQLDatabaseType = iota
@@ -23,6 +25,19 @@ type Migration struct {
 	// Rollback is the rollback file for the current migration. There must
 	// always be one; otherwise an error will occurr.
 	Rollback Rollback
+}
+
+// RanMigration is a representation of a migration that was previously ran
+// into the database.
+type RanMigration struct {
+	// Id is the identifier of the migration that was ran.
+	Id int
+
+	// FileName is the name of the migration.
+	FileName string
+
+	// Ran is when the migration was ran into the database.
+	Ran time.Time
 }
 
 // Rollback is a rollback script related to a migration.

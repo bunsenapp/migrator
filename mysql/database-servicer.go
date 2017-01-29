@@ -30,6 +30,14 @@ func (db mysqlDbServicer) BeginTransaction() error {
 	return nil
 }
 
+func (db mysqlDbServicer) RanMigrations() ([]migrator.RanMigration, error) {
+	return nil, nil
+}
+
+func (db mysqlDbServicer) TryCreateHistoryTable() (bool, error) {
+	return false, nil
+}
+
 func (db mysqlDbServicer) EndTransaction() error {
 	return nil
 }
