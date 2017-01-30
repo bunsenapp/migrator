@@ -162,7 +162,7 @@ func TestErrorWhilstCreatingMigrationHistoryTableIsReturned(t *testing.T) {
 	defer cleanUp()
 
 	createHistoryTableFunc := func() (bool, error) {
-		return false, migrator.NewCreatingHistoryTableError(errors.New("foobar"))
+		return false, migrator.NewErrCreatingHistoryTable(errors.New("foobar"))
 	}
 
 	db := mock.WorkingMockDatabaseServicer()

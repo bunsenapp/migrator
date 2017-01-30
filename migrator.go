@@ -130,7 +130,7 @@ func (m Migrator) Run() error {
 	// not there already.
 	h, err := m.DatabaseServicer.TryCreateHistoryTable()
 	if err != nil {
-		return NewCreatingHistoryTableError(err)
+		return NewErrCreatingHistoryTable(err)
 	}
 	if h {
 		m.LogServicer.Printf("created migration history table")
@@ -162,7 +162,7 @@ func (m Migrator) Run() error {
 func (m Migrator) findMigrations() ([]Migration, error) {
 	migFiles, err := ioutil.ReadDir(m.Config.MigrationsDir)
 	if err != nil {
-		return nil, NewSearchingDirError(m.Config.MigrationsDir, err)
+		return nil, NewErrSearchingDir(m.Config.MigrationsDir, err)
 	}
 	if len(migFiles) == 0 {
 		return nil, ErrNoMigrationsInDir
@@ -170,7 +170,7 @@ func (m Migrator) findMigrations() ([]Migration, error) {
 
 	rollFiles, err := ioutil.ReadDir(m.Config.RollbacksDir)
 	if err != nil {
-		return nil, NewSearchingDirError(m.Config.RollbacksDir, err)
+		return nil, NewErrSearchingDir(m.Config.RollbacksDir, err)
 	}
 	if len(rollFiles) == 0 {
 		return nil, ErrNoRollbacksInDir
@@ -195,12 +195,12 @@ func (m Migrator) findMigrations() ([]Migration, error) {
 
 		migrationId, err := strconv.Atoi(fileNameParts[0])
 		if err != nil {
-			return nil, NewInvalidMigrationIdError(migration.Name(), err)
+			return nil, NewErrInvalidMigrationId(migration.Name(), err)
 		}
 
 		file, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", m.Config.MigrationsDir, migration.Name()))
 		if err != nil {
-			return nil, NewReadFileError(migration.Name(), err)
+			return nil, NewErrReadingFile(migration.Name(), err)
 		}
 
 		migration := Migration{
@@ -225,7 +225,7 @@ func (m Migrator) findRollback(migName string, rbs []os.FileInfo) (Rollback, err
 
 		file, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", m.Config.RollbacksDir, r.Name()))
 		if err != nil {
-			return Rollback{}, NewReadFileError(r.Name(), err)
+			return Rollback{}, NewErrReadingFile(r.Name(), err)
 		}
 
 		rollbackName := fmt.Sprintf("%s_%s", rollbackNameParts[0], rollbackNameParts[1])
@@ -237,7 +237,7 @@ func (m Migrator) findRollback(migName string, rbs []os.FileInfo) (Rollback, err
 		}
 	}
 
-	return Rollback{}, NewMissingRollbackFileError(migName)
+	return Rollback{}, NewErrMissingRollbackFile(migName)
 }
 
 func removeFileExtension(fp string) string {

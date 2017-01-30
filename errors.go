@@ -31,42 +31,42 @@ var (
 	ErrCreatingDbTransaction = errors.New("unable to create database transaction")
 )
 
-// NewSearchingDirError creates a new instance of the ErrSearchingDir struct.
-func NewSearchingDirError(dir string, err error) error {
+// NewErrSearchingDir creates a new instance of the ErrSearchingDir struct.
+func NewErrSearchingDir(dir string, err error) error {
 	return ErrSearchingDir{
 		dir: dir,
 		err: err,
 	}
 }
 
-// NewMissingRollbackFileError creates a new instance of the ErrMissingRollbackFile
+// NewErrMissingRollbackFile creates a new instance of the ErrMissingRollbackFile
 // struct.
-func NewMissingRollbackFileError(file string) error {
+func NewErrMissingRollbackFile(file string) error {
 	return ErrMissingRollbackFile{
 		file: file,
 	}
 }
 
-// NewInvalidMigrationIdError creates a new instance of the ErrInvalidMigrationId
+// NewErrInvalidMigrationId creates a new instance of the ErrInvalidMigrationId
 // struct.
-func NewInvalidMigrationIdError(migration string, err error) error {
+func NewErrInvalidMigrationId(migration string, err error) error {
 	return ErrInvalidMigrationId{
 		migration: migration,
 		err:       err,
 	}
 }
 
-// NewReadFileError creates a new instance of the ErrReadingFile struct.
-func NewReadFileError(file string, err error) error {
+// NewErrReadingFile creates a new instance of the ErrReadingFile struct.
+func NewErrReadingFile(file string, err error) error {
 	return ErrReadingFile{
 		file: file,
 		err:  err,
 	}
 }
 
-// NewCreatingHistoryTableError creates a new instance of the ErrCreatingHistoryTable
+// NewErrCreatingHistoryTable creates a new instance of the ErrCreatingHistoryTable
 // struct.
-func NewCreatingHistoryTableError(err error) error {
+func NewErrCreatingHistoryTable(err error) error {
 	return ErrCreatingHistoryTable{
 		err: err,
 	}
