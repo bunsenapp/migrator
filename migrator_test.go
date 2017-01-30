@@ -213,7 +213,49 @@ func TestIfMigrationHasAlreadyBeenDeployedItIsNotRanInAgain(t *testing.T) {
 	}
 }
 
+func TestTransactionIsCreatedPriorToAnyMigrationBeingRan(t *testing.T) {
+}
+
 func TestIfMigrationHasNotBeenDeployedItIsRanIn(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	migrations := make([]string, 10)
+
+	createHistoryTableFunc := func() (bool, error) {
+		return true, nil
+	}
+	ranMigrationsFunc := func() ([]migrator.RanMigration, error) {
+		return []migrator.RanMigration{}, nil
+	}
+	runMigrationFunc := func(m migrator.Migration) error {
+		migrations[len(migrations)-1] = m.FileName
+		return nil
+	}
+
+	db := mock.MockDatabaseServicer{
+		TryCreateHistoryTableFunc: createHistoryTableFunc,
+		RanMigrationsFunc:         ranMigrationsFunc,
+		RunMigrationFunc:          runMigrationFunc,
+	}
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	m.Run()
+
+	found := false
+	for _, r := range migrations {
+		if r == "1_first-migration_up.sql" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("migration was not ran when it should have been")
+	}
+}
+
+func TestErrorDuringMigrationRunIsReturned(t *testing.T) {
+}
+
+func TestErrorDuringMigrationRunResultsInTransactionBeingRolledBack(t *testing.T) {
 }
 
 func TestYouCannotRollbackANotLatestMigration(t *testing.T) {
