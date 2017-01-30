@@ -27,8 +27,7 @@ func TestInvalidConfigurationResultsInAnError(t *testing.T) {
 	}
 }
 
-func NewConfiguredMigrator(c migrator.Configuration, d migrator.DatabaseServicer,
-	l migrator.LogServicer) migrator.Migrator {
+func NewConfiguredMigrator(c migrator.Configuration, d migrator.DatabaseServicer, l migrator.LogServicer) migrator.Migrator {
 	return migrator.Migrator{
 		Config:           c,
 		DatabaseServicer: d,

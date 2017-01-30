@@ -105,8 +105,7 @@ type ErrInvalidMigrationId struct {
 
 // Error yields the error string for the ErrInvalidMigrationId struct.
 func (e ErrInvalidMigrationId) Error() string {
-	return fmt.Sprintf("invalid migration id: %s, conversion yielded error: %s",
-		e.migration, e.err)
+	return fmt.Sprintf("invalid migration id: %s, conversion yielded error: %s", e.migration, e.err)
 }
 
 // ErrReadingFile is an error that is raised when the application is unable to

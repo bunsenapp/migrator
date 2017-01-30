@@ -89,8 +89,7 @@ func (c Configuration) Validate() error {
 // NewMigrator initialises a set up migrator that can be used without having
 // to manually construct dependencies. You must inject a LogServicer implementation
 // into this function. You will be able to use most logging libraries with it.
-func NewMigrator(config Configuration, db DatabaseServicer,
-	logger LogServicer) (Migrator, error) {
+func NewMigrator(config Configuration, db DatabaseServicer, logger LogServicer) (Migrator, error) {
 	return Migrator{
 		Config:           config,
 		DatabaseServicer: db,
