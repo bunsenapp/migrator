@@ -148,15 +148,8 @@ func TestMigrationHistoryTableIsAlwaysAttemptedToBeCreated(t *testing.T) {
 		return true, nil
 	}
 
-	db := mock.MockDatabaseServicer{
-		TryCreateHistoryTableFunc: createHistoryTableFunc,
-		RanMigrationsFunc: func() ([]migrator.RanMigration, error) {
-			return []migrator.RanMigration{
-				migrator.RanMigration{},
-			}, nil
-		},
-		RunMigrationFunc: func(m migrator.Migration) error { return nil },
-	}
+	db := mock.WorkingMockDatabaseServicer()
+	db.TryCreateHistoryTableFunc = createHistoryTableFunc
 	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
 	m.Run()
 
@@ -173,7 +166,8 @@ func TestErrorWhilstCreatingMigrationHistoryTableIsReturned(t *testing.T) {
 		return false, migrator.NewCreatingHistoryTableError(errors.New("foobar"))
 	}
 
-	db := mock.MockDatabaseServicer{TryCreateHistoryTableFunc: createHistoryTableFunc}
+	db := mock.WorkingMockDatabaseServicer()
+	db.TryCreateHistoryTableFunc = createHistoryTableFunc
 	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
 
 	err := m.Run()
@@ -188,10 +182,11 @@ func TestIfMigrationHasAlreadyBeenDeployedItIsNotRanInAgain(t *testing.T) {
 
 	migrations := make([]string, 10)
 
-	createHistoryTableFunc := func() (bool, error) {
+	db := mock.WorkingMockDatabaseServicer()
+	db.TryCreateHistoryTableFunc = func() (bool, error) {
 		return true, nil
 	}
-	ranMigrationsFunc := func() ([]migrator.RanMigration, error) {
+	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
 		return []migrator.RanMigration{
 			migrator.RanMigration{
 				FileName: "1_first-migration_up.sql",
@@ -199,10 +194,6 @@ func TestIfMigrationHasAlreadyBeenDeployedItIsNotRanInAgain(t *testing.T) {
 		}, nil
 	}
 
-	db := mock.MockDatabaseServicer{
-		TryCreateHistoryTableFunc: createHistoryTableFunc,
-		RanMigrationsFunc:         ranMigrationsFunc,
-	}
 	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
 	m.Run()
 
@@ -214,6 +205,38 @@ func TestIfMigrationHasAlreadyBeenDeployedItIsNotRanInAgain(t *testing.T) {
 }
 
 func TestTransactionIsCreatedPriorToAnyMigrationBeingRan(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	transactionCreated := false
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.BeginTransactionFunc = func() error {
+		transactionCreated = true
+		return nil
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	m.Run()
+
+	if !transactionCreated {
+		t.Errorf("transaction was not created when it should have been")
+	}
+}
+
+func TestErrorCreatingTransactionIsReturned(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.BeginTransactionFunc = func() error {
+		return errors.New("rip")
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	if err := m.Run(); err != migrator.ErrCreatingDbTransaction {
+		t.Errorf("error was not thrown when it should have been")
+	}
 }
 
 func TestIfMigrationHasNotBeenDeployedItIsRanIn(t *testing.T) {
@@ -222,22 +245,12 @@ func TestIfMigrationHasNotBeenDeployedItIsRanIn(t *testing.T) {
 
 	migrations := make([]string, 10)
 
-	createHistoryTableFunc := func() (bool, error) {
-		return true, nil
-	}
-	ranMigrationsFunc := func() ([]migrator.RanMigration, error) {
-		return []migrator.RanMigration{}, nil
-	}
-	runMigrationFunc := func(m migrator.Migration) error {
+	db := mock.WorkingMockDatabaseServicer()
+	db.RunMigrationFunc = func(m migrator.Migration) error {
 		migrations[len(migrations)-1] = m.FileName
 		return nil
 	}
 
-	db := mock.MockDatabaseServicer{
-		TryCreateHistoryTableFunc: createHistoryTableFunc,
-		RanMigrationsFunc:         ranMigrationsFunc,
-		RunMigrationFunc:          runMigrationFunc,
-	}
 	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
 	m.Run()
 
@@ -256,6 +269,9 @@ func TestErrorDuringMigrationRunIsReturned(t *testing.T) {
 }
 
 func TestErrorDuringMigrationRunResultsInTransactionBeingRolledBack(t *testing.T) {
+}
+
+func TestThatRollbackIsNotCalledWhenATransactionIsCommitted(t *testing.T) {
 }
 
 func TestYouCannotRollbackANotLatestMigration(t *testing.T) {

@@ -2,6 +2,28 @@ package mock
 
 import "github.com/bunsenapp/migrator"
 
+// WorkingMockDatabaseServicer returns a working mock database servicer
+// that will not cause any panics due to invalid pointer references.
+func WorkingMockDatabaseServicer() MockDatabaseServicer {
+	return MockDatabaseServicer{
+		BeginTransactionFunc: func() error {
+			return nil
+		},
+		EndTransactionFunc: func() error {
+			return nil
+		},
+		RanMigrationsFunc: func() ([]migrator.RanMigration, error) {
+			return []migrator.RanMigration{}, nil
+		},
+		RunMigrationFunc: func(m migrator.Migration) error {
+			return nil
+		},
+		TryCreateHistoryTableFunc: func() (bool, error) {
+			return true, nil
+		},
+	}
+}
+
 // BeginTransactionFunc is a function type that allows custom responses to be
 // returned from the BeginTransaction call.
 type BeginTransactionFunc func() error

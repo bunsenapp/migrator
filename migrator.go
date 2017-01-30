@@ -145,6 +145,12 @@ func (m Migrator) Run() error {
 		return ErrUnableToRetrieveRanMigrations
 	}
 
+	// Create a transaction to batch run the migrations.
+	if err := m.DatabaseServicer.BeginTransaction(); err != nil {
+		m.LogServicer.Printf("database error creating transaction: %s", err)
+		return ErrCreatingDbTransaction
+	}
+
 	for _, migration := range migrationFiles {
 		if !migrationRan(ranMigrations, migration) {
 			m.DatabaseServicer.RunMigration(migration)

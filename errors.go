@@ -25,6 +25,10 @@ var (
 	// ErrUnableToRetrieveRanMigrations is an error that is raised when the
 	// migration history table cannot be queried.
 	ErrUnableToRetrieveRanMigrations = errors.New("unable to retrieve ran migrations")
+
+	// ErrCreatingDbTransaction is an error that is raised when the application
+	// is unable to create a transaction in the database.
+	ErrCreatingDbTransaction = errors.New("unable to create database transaction")
 )
 
 // NewSearchingDirError creates a new instance of the ErrSearchingDir struct.
