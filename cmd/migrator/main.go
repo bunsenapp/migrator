@@ -46,7 +46,7 @@ func main() {
 		logger.Printf("database initialisation error: %e", err)
 	}
 
-	m, err := NewMigrator(config, db, logger)
+	m, err := migrator.NewMigrator(config, db, logger)
 	if err != nil {
 		logger.Printf("error creating migrator instance: %s\n", err)
 	}
