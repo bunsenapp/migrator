@@ -124,7 +124,6 @@ func (m Migrator) Migrate() error {
 	}
 
 	for _, migration := range migrationFiles {
-
 		if !migrationRan(ranMigrations, migration) {
 			err := m.DatabaseServicer.RunMigration(migration)
 			if err != nil {
@@ -134,7 +133,6 @@ func (m Migrator) Migrate() error {
 
 			m.LogServicer.Printf("migrated %s", migration.FileName)
 		}
-
 	}
 
 	err = m.DatabaseServicer.CommitTransaction()
@@ -241,7 +239,8 @@ func (m Migrator) findMigrations() ([]Migration, error) {
 			continue
 		}
 
-		rollback, err := m.findRollback(fmt.Sprintf("%s_%s", fileNameParts[0], fileNameParts[1]), rollbackFiles)
+		rollbackName := strings.Join(fileNameParts[0:2], "_")
+		rollback, err := m.findRollback(rollbackName, rollbackFiles)
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +250,8 @@ func (m Migrator) findMigrations() ([]Migration, error) {
 			return nil, NewErrInvalidMigrationId(migration.Name(), err)
 		}
 
-		file, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", m.Config.MigrationsDir, migration.Name()))
+		filePath := fmt.Sprintf("%s/%s", m.Config.MigrationsDir, migration.Name())
+		file, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			return nil, NewErrReadingFile(migration.Name(), err)
 		}
@@ -272,7 +272,6 @@ func (m Migrator) findRollback(migName string, rbs []os.FileInfo) (Rollback, err
 	for _, r := range rbs {
 		// Each migration/rollback file name should be of format:
 		// id_name_up/down.sql. If they are not, we should not include them.
-
 		rollbackNameParts := strings.Split(r.Name(), "_")
 
 		if !migrationActionEquals(rollbackNameParts, "down") {
@@ -280,12 +279,13 @@ func (m Migrator) findRollback(migName string, rbs []os.FileInfo) (Rollback, err
 			continue
 		}
 
-		file, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", m.Config.RollbacksDir, r.Name()))
+		filePath := fmt.Sprintf("%s/%s", m.Config.RollbacksDir, r.Name())
+		file, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			return Rollback{}, NewErrReadingFile(r.Name(), err)
 		}
 
-		rollbackName := fmt.Sprintf("%s_%s", rollbackNameParts[0], rollbackNameParts[1])
+		rollbackName := strings.Join(rollbackNameParts[0:2], "_")
 		if strings.ToLower(rollbackName) == strings.ToLower(migName) {
 			return Rollback{
 				FileName:     r.Name(),
