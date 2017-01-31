@@ -38,6 +38,10 @@ func (db mysqlDbServicer) TryCreateHistoryTable() (bool, error) {
 	return false, nil
 }
 
-func (db mysqlDbServicer) EndTransaction() error {
+func (db mysqlDbServicer) CommitTransaction() error {
+	return nil
+}
+
+func (db mysqlDbServicer) RollbackTransaction() error {
 	return nil
 }

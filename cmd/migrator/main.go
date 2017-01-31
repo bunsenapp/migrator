@@ -51,7 +51,7 @@ func main() {
 		logger.Printf("error creating migrator instance: %s\n", err)
 	}
 
-	if err := m.Run(); err != nil {
+	if err := m.Migrate(); err != nil {
 		logger.Printf("error during migration run: %s\n", err)
 	}
 }

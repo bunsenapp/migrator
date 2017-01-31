@@ -6,13 +6,16 @@ type DatabaseServicer interface {
 	// servicer.
 	BeginTransaction() error
 
-	// EndTransaction ends the created transaction providing there is one.
-	// If any errors have occurred, the transaction will be rolled back, otherwise,
-	// it will be committed.
-	EndTransaction() error
+	// CommitTransaction ends the created transaction providing there is one
+	// and commits it to the database.
+	CommitTransaction() error
 
 	// RanMigrations retrieves all previously ran migrations.
 	RanMigrations() ([]RanMigration, error)
+
+	// RollbackTransaction ends the created transaction providing there is one
+	// and rolls it back, ensuring there are no changes to the database made.
+	RollbackTransaction() error
 
 	// RunMigration runs the specified migration against the current database.
 	RunMigration(m Migration) error

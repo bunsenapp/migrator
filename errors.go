@@ -72,6 +72,15 @@ func NewErrCreatingHistoryTable(err error) error {
 	}
 }
 
+// NewErrRunningMigration creates a new instance of the ErrRunningMigration
+// struct.
+func NewErrRunningMigration(m Migration, err error) error {
+	return ErrRunningMigration{
+		m:   m,
+		err: err,
+	}
+}
+
 // ErrSearchingDir is an error that is raised when the searching of a directory
 // fails.
 type ErrSearchingDir struct {
@@ -129,4 +138,16 @@ type ErrCreatingHistoryTable struct {
 // Error yields the error string for the ErrCreatingHistoryTable struct.
 func (e ErrCreatingHistoryTable) Error() string {
 	return fmt.Sprintf("error creating migration history table: %s", e.err)
+}
+
+// ErrRunningMigration is an error that is raised when the application fails to
+// run a migration.
+type ErrRunningMigration struct {
+	m   Migration
+	err error
+}
+
+// Error yields the error string for the ErrRunningMigration struct.
+func (e ErrRunningMigration) Error() string {
+	return fmt.Sprintf("error whilst running migration %s: %s", e.m.FileName, e.err)
 }

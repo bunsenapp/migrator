@@ -43,7 +43,7 @@ func TestConfigurationValidationFailureIsReturned(t *testing.T) {
 		t.Errorf("Error occurred whilst creating migrator.")
 	}
 
-	if err = m.Run(); err == nil || err != migrator.ErrConfigurationInvalid {
+	if err = m.Migrate(); err == nil || err != migrator.ErrConfigurationInvalid {
 		t.Errorf("error returned was not correct.")
 	}
 }
@@ -54,7 +54,7 @@ func TestNotInitialisedDatabaseServicerResultsInError(t *testing.T) {
 	m := migrator.Migrator{
 		Config: config,
 	}
-	if err := m.Run(); err == nil || err != migrator.ErrDbServicerNotInitialised {
+	if err := m.Migrate(); err == nil || err != migrator.ErrDbServicerNotInitialised {
 		t.Errorf("error returned was not correct.")
 	}
 }
@@ -63,7 +63,7 @@ func TestErrorWhilstGettingFilesFromMigrationDirIsReturned(t *testing.T) {
 	config := mock.ValidConfiguration()
 
 	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
-	err := m.Run()
+	err := m.Migrate()
 	if _, ok := err.(migrator.ErrSearchingDir); !ok {
 		t.Errorf("error returned was not correct")
 	}
@@ -80,7 +80,7 @@ func TestErrorWhilstGettingFilesFromRollbackDirIsReturned(t *testing.T) {
 	os.Create("migrationDirTest/1_test_up.sql")
 
 	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
-	err := m.Run()
+	err := m.Migrate()
 	if _, ok := err.(migrator.ErrSearchingDir); !ok {
 		t.Errorf("error returned was not correct")
 	}
@@ -91,7 +91,7 @@ func TestNoMigrationsResultsInAnError(t *testing.T) {
 	defer cleanUp()
 
 	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
-	if err := m.Run(); err == nil || err != migrator.ErrNoMigrationsInDir {
+	if err := m.Migrate(); err == nil || err != migrator.ErrNoMigrationsInDir {
 		t.Errorf("error returned was not correct")
 	}
 }
@@ -103,7 +103,7 @@ func TestNoRollbacksResultsInAnError(t *testing.T) {
 	os.Create(fmt.Sprintf("%s/1_test_up.sql", config.MigrationsDir))
 
 	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
-	if err := m.Run(); err == nil || err != migrator.ErrNoRollbacksInDir {
+	if err := m.Migrate(); err == nil || err != migrator.ErrNoRollbacksInDir {
 		fmt.Println(err)
 		t.Errorf("error returned was not correct")
 	}
@@ -117,7 +117,7 @@ func TestMigrationsWithoutRollbacksResultsInAnError(t *testing.T) {
 	os.Create(fmt.Sprintf("%s/fake-rollback.sql", config.RollbacksDir))
 
 	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
-	err := m.Run()
+	err := m.Migrate()
 	if _, ok := err.(migrator.ErrMissingRollbackFile); !ok {
 		t.Errorf("error returned was not correct")
 	}
@@ -131,7 +131,7 @@ func TestMigrationsWithAnInvalidIdResultsInAnError(t *testing.T) {
 	os.Create(fmt.Sprintf("%s/foo_my-first-migration_down.sql", config.RollbacksDir))
 
 	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
-	err := m.Run()
+	err := m.Migrate()
 	if _, ok := err.(migrator.ErrInvalidMigrationId); !ok {
 		t.Errorf("error returned was not correct")
 	}
@@ -150,7 +150,7 @@ func TestMigrationHistoryTableIsAlwaysAttemptedToBeCreated(t *testing.T) {
 	db := mock.WorkingMockDatabaseServicer()
 	db.TryCreateHistoryTableFunc = createHistoryTableFunc
 	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
-	m.Run()
+	m.Migrate()
 
 	if !callMade {
 		t.Errorf("call to create history table was not made")
@@ -169,7 +169,7 @@ func TestErrorWhilstCreatingMigrationHistoryTableIsReturned(t *testing.T) {
 	db.TryCreateHistoryTableFunc = createHistoryTableFunc
 	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
 
-	err := m.Run()
+	err := m.Migrate()
 	if _, ok := err.(migrator.ErrCreatingHistoryTable); !ok {
 		t.Errorf("error returned was not correct")
 	}
@@ -194,7 +194,7 @@ func TestIfMigrationHasAlreadyBeenDeployedItIsNotRanInAgain(t *testing.T) {
 	}
 
 	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
-	m.Run()
+	m.Migrate()
 
 	for _, r := range migrations {
 		if r == "1_first-migration_up.sql" {
@@ -216,7 +216,7 @@ func TestTransactionIsCreatedPriorToAnyMigrationBeingRan(t *testing.T) {
 	}
 
 	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
-	m.Run()
+	m.Migrate()
 
 	if !transactionCreated {
 		t.Errorf("transaction was not created when it should have been")
@@ -233,7 +233,7 @@ func TestErrorCreatingTransactionIsReturned(t *testing.T) {
 	}
 
 	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
-	if err := m.Run(); err != migrator.ErrCreatingDbTransaction {
+	if err := m.Migrate(); err != migrator.ErrCreatingDbTransaction {
 		t.Errorf("error was not thrown when it should have been")
 	}
 }
@@ -251,7 +251,7 @@ func TestIfMigrationHasNotBeenDeployedItIsRanIn(t *testing.T) {
 	}
 
 	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
-	m.Run()
+	m.Migrate()
 
 	found := false
 	for _, r := range migrations {
@@ -265,12 +265,41 @@ func TestIfMigrationHasNotBeenDeployedItIsRanIn(t *testing.T) {
 }
 
 func TestErrorDuringMigrationRunIsReturned(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.RunMigrationFunc = func(m migrator.Migration) error {
+		return errors.New("foo")
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	err := m.Migrate()
+	if _, ok := err.(migrator.ErrRunningMigration); !ok {
+		t.Errorf("error was not thrown when it should have been")
+	}
 }
 
 func TestErrorDuringMigrationRunResultsInTransactionBeingRolledBack(t *testing.T) {
-}
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
 
-func TestThatRollbackIsNotCalledWhenATransactionIsCommitted(t *testing.T) {
+	endedTransaction := false
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.RunMigrationFunc = func(m migrator.Migration) error {
+		return errors.New("foo")
+	}
+	db.RollbackTransactionFunc = func() error {
+		endedTransaction = true
+		return nil
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	m.Migrate()
+	if !endedTransaction {
+		t.Errorf("transaction was not ended after an error occurred")
+	}
 }
 
 func TestYouCannotRollbackANotLatestMigration(t *testing.T) {

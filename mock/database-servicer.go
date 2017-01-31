@@ -9,11 +9,14 @@ func WorkingMockDatabaseServicer() MockDatabaseServicer {
 		BeginTransactionFunc: func() error {
 			return nil
 		},
-		EndTransactionFunc: func() error {
+		CommitTransactionFunc: func() error {
 			return nil
 		},
 		RanMigrationsFunc: func() ([]migrator.RanMigration, error) {
 			return []migrator.RanMigration{}, nil
+		},
+		RollbackTransactionFunc: func() error {
+			return nil
 		},
 		RunMigrationFunc: func(m migrator.Migration) error {
 			return nil
@@ -28,13 +31,17 @@ func WorkingMockDatabaseServicer() MockDatabaseServicer {
 // returned from the BeginTransaction call.
 type BeginTransactionFunc func() error
 
-// EndTransactionFunc is a function type that allows custom responses to be
-// returned from the EndTransaction call.
-type EndTransactionFunc func() error
+// CommitTransactionFunc is a function type that allows custom responses to be
+// returned from the CommitTransaction call.
+type CommitTransactionFunc func() error
 
 // RanMigrationsFunc is a function type that allows custom responses to be
 // returned from the RanMigrations call.
 type RanMigrationsFunc func() ([]migrator.RanMigration, error)
+
+// RollbackTransactionFunc is a function type that allows custom responses to
+// be returned from the RollbackTransaction call.
+type RollbackTransactionFunc func() error
 
 // RunMigrationFunc is a closure that allows custom responses to be returned
 // from the RunMigration call on a per test basis.
@@ -48,8 +55,9 @@ type TryCreateHistoryTableFunc func() (bool, error)
 // interface.
 type MockDatabaseServicer struct {
 	BeginTransactionFunc      BeginTransactionFunc
-	EndTransactionFunc        EndTransactionFunc
+	CommitTransactionFunc     CommitTransactionFunc
 	RanMigrationsFunc         RanMigrationsFunc
+	RollbackTransactionFunc   RollbackTransactionFunc
 	RunMigrationFunc          RunMigrationFunc
 	TryCreateHistoryTableFunc TryCreateHistoryTableFunc
 }
@@ -59,14 +67,19 @@ func (m MockDatabaseServicer) BeginTransaction() error {
 	return m.BeginTransactionFunc()
 }
 
-// EndTransaction ends a fake database transaction.
-func (m MockDatabaseServicer) EndTransaction() error {
-	return m.EndTransactionFunc()
+// CommitTransaction ends a fake database transaction.
+func (m MockDatabaseServicer) CommitTransaction() error {
+	return m.CommitTransactionFunc()
 }
 
 // RanMigrations runs a fake migration check.
 func (m MockDatabaseServicer) RanMigrations() ([]migrator.RanMigration, error) {
 	return m.RanMigrationsFunc()
+}
+
+// RollbackTransaction rolls back a fake database transaction.
+func (m MockDatabaseServicer) RollbackTransaction() error {
+	return m.RollbackTransactionFunc()
 }
 
 // RunMigration runs a fake database migration.

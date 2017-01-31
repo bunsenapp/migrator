@@ -111,18 +111,72 @@ type Migrator struct {
 	LogServicer LogServicer
 }
 
-// Run is the entry point for the migrations.
-func (m Migrator) Run() error {
-	if err := m.Config.Validate(); err != nil {
-		return err
-	}
-	if m.DatabaseServicer == nil {
-		return ErrDbServicerNotInitialised
-	}
-
-	migrationFiles, err := m.findMigrations()
+// Migrate migrates all available migrations.
+func (m Migrator) Migrate() error {
+	migrationFiles, err := m.bootstrapMigrator()
 	if err != nil {
 		return err
+	}
+
+	ranMigrations, err := m.DatabaseServicer.RanMigrations()
+	if err != nil {
+		return ErrUnableToRetrieveRanMigrations
+	}
+
+	for _, migration := range migrationFiles {
+		if !migrationRan(ranMigrations, migration) {
+			if err := m.DatabaseServicer.RunMigration(migration); err != nil {
+				m.DatabaseServicer.RollbackTransaction()
+				return NewErrRunningMigration(migration, err)
+			}
+		}
+	}
+
+	err = m.DatabaseServicer.CommitTransaction()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Rollback rolls back a specified transaction.
+func (m Migrator) Rollback(name string) error {
+	migrationFiles, err := m.bootstrapMigrator()
+	if err != nil {
+		return err
+	}
+
+	if m.Config.MigrationToRollback != "" {
+		var mToR Migration
+
+		for _, migration := range migrationFiles {
+			if migration.FileName == m.Config.MigrationToRollback {
+				mToR = migration
+				break
+			}
+		}
+
+		fmt.Println(mToR)
+	}
+
+	return nil
+}
+
+func (m Migrator) bootstrapMigrator() ([]Migration, error) {
+	var migrationFiles []Migration
+	var err error
+
+	if err := m.Config.Validate(); err != nil {
+		return migrationFiles, err
+	}
+	if m.DatabaseServicer == nil {
+		return migrationFiles, ErrDbServicerNotInitialised
+	}
+
+	migrationFiles, err = m.findMigrations()
+	if err != nil {
+		return migrationFiles, err
 	}
 	m.LogServicer.Printf("located %d migration files", len(migrationFiles))
 
@@ -130,7 +184,7 @@ func (m Migrator) Run() error {
 	// not there already.
 	h, err := m.DatabaseServicer.TryCreateHistoryTable()
 	if err != nil {
-		return NewErrCreatingHistoryTable(err)
+		return migrationFiles, NewErrCreatingHistoryTable(err)
 	}
 	if h {
 		m.LogServicer.Printf("created migration history table")
@@ -139,24 +193,13 @@ func (m Migrator) Run() error {
 	// Sort the migration files by their ids.
 	sort.Sort(migrations(migrationFiles))
 
-	ranMigrations, err := m.DatabaseServicer.RanMigrations()
-	if err != nil {
-		return ErrUnableToRetrieveRanMigrations
-	}
-
 	// Create a transaction to batch run the migrations.
 	if err := m.DatabaseServicer.BeginTransaction(); err != nil {
 		m.LogServicer.Printf("database error creating transaction: %s", err)
-		return ErrCreatingDbTransaction
+		return migrationFiles, ErrCreatingDbTransaction
 	}
 
-	for _, migration := range migrationFiles {
-		if !migrationRan(ranMigrations, migration) {
-			m.DatabaseServicer.RunMigration(migration)
-		}
-	}
-
-	return nil
+	return migrationFiles, err
 }
 
 func (m Migrator) findMigrations() ([]Migration, error) {
