@@ -124,12 +124,17 @@ func (m Migrator) Migrate() error {
 	}
 
 	for _, migration := range migrationFiles {
+
 		if !migrationRan(ranMigrations, migration) {
-			if err := m.DatabaseServicer.RunMigration(migration); err != nil {
+			err := m.DatabaseServicer.RunMigration(migration)
+			if err != nil {
 				m.DatabaseServicer.RollbackTransaction()
 				return NewErrRunningMigration(migration, err)
 			}
+
+			m.LogServicer.Printf("migrated %s", migration.FileName)
 		}
+
 	}
 
 	err = m.DatabaseServicer.CommitTransaction()
@@ -148,16 +153,16 @@ func (m Migrator) Rollback(name string) error {
 	}
 
 	if m.Config.MigrationToRollback != "" {
-		var mToR Migration
+		var toRollback Migration
 
 		for _, migration := range migrationFiles {
 			if migration.FileName == m.Config.MigrationToRollback {
-				mToR = migration
+				toRollback = migration
 				break
 			}
 		}
 
-		fmt.Println(mToR)
+		fmt.Println(toRollback)
 	}
 
 	return nil
@@ -170,6 +175,7 @@ func (m Migrator) bootstrapMigrator() ([]Migration, error) {
 	if err := m.Config.Validate(); err != nil {
 		return migrationFiles, err
 	}
+
 	if m.DatabaseServicer == nil {
 		return migrationFiles, ErrDbServicerNotInitialised
 	}
@@ -178,6 +184,7 @@ func (m Migrator) bootstrapMigrator() ([]Migration, error) {
 	if err != nil {
 		return migrationFiles, err
 	}
+
 	m.LogServicer.Printf("located %d migration files", len(migrationFiles))
 
 	// Now we have the migration files, create the history table if it is
@@ -186,6 +193,7 @@ func (m Migrator) bootstrapMigrator() ([]Migration, error) {
 	if err != nil {
 		return migrationFiles, NewErrCreatingHistoryTable(err)
 	}
+
 	if h {
 		m.LogServicer.Printf("created migration history table")
 	}
@@ -203,35 +211,37 @@ func (m Migrator) bootstrapMigrator() ([]Migration, error) {
 }
 
 func (m Migrator) findMigrations() ([]Migration, error) {
-	migFiles, err := ioutil.ReadDir(m.Config.MigrationsDir)
+	migrationFiles, err := ioutil.ReadDir(m.Config.MigrationsDir)
 	if err != nil {
 		return nil, NewErrSearchingDir(m.Config.MigrationsDir, err)
 	}
-	if len(migFiles) == 0 {
+
+	if len(migrationFiles) == 0 {
 		return nil, ErrNoMigrationsInDir
 	}
 
-	rollFiles, err := ioutil.ReadDir(m.Config.RollbacksDir)
+	rollbackFiles, err := ioutil.ReadDir(m.Config.RollbacksDir)
 	if err != nil {
 		return nil, NewErrSearchingDir(m.Config.RollbacksDir, err)
 	}
-	if len(rollFiles) == 0 {
+
+	if len(rollbackFiles) == 0 {
 		return nil, ErrNoRollbacksInDir
 	}
 
-	migrations := make([]Migration, len(migFiles))
+	migrations := make([]Migration, len(migrationFiles))
 
-	for _, migration := range migFiles {
+	for _, migration := range migrationFiles {
 		// Each migration/rollback file name should be of format:
 		// id_name_up/down.sql. If they are not, we should not include them.
 		fileNameParts := strings.Split(migration.Name(), "_")
 
-		if len(fileNameParts) != 3 || removeFileExtension(fileNameParts[2]) != "up" {
+		if !migrationActionEquals(fileNameParts, "up") {
 			m.LogServicer.Printf("skipping file %s, does not have an appropriate file name\n", migration.Name())
 			continue
 		}
 
-		rollback, err := m.findRollback(fmt.Sprintf("%s_%s", fileNameParts[0], fileNameParts[1]), rollFiles)
+		rollback, err := m.findRollback(fmt.Sprintf("%s_%s", fileNameParts[0], fileNameParts[1]), rollbackFiles)
 		if err != nil {
 			return nil, err
 		}
@@ -260,8 +270,12 @@ func (m Migrator) findMigrations() ([]Migration, error) {
 
 func (m Migrator) findRollback(migName string, rbs []os.FileInfo) (Rollback, error) {
 	for _, r := range rbs {
+		// Each migration/rollback file name should be of format:
+		// id_name_up/down.sql. If they are not, we should not include them.
+
 		rollbackNameParts := strings.Split(r.Name(), "_")
-		if len(rollbackNameParts) != 3 || removeFileExtension(rollbackNameParts[2]) != "down" {
+
+		if !migrationActionEquals(rollbackNameParts, "down") {
 			m.LogServicer.Printf("skipping file %s, does not have an appropriate file name\n", r.Name())
 			continue
 		}
@@ -283,8 +297,13 @@ func (m Migrator) findRollback(migName string, rbs []os.FileInfo) (Rollback, err
 	return Rollback{}, NewErrMissingRollbackFile(migName)
 }
 
+func migrationActionEquals(fileParts []string, ext string) bool {
+	return len(fileParts) == 3 && removeFileExtension(fileParts[2]) == ext
+}
+
 func removeFileExtension(fp string) string {
 	fileParts := strings.Split(fp, ".")
+
 	if len(fileParts) > 0 {
 		return strings.ToLower(fileParts[0])
 	}

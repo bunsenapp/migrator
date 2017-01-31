@@ -116,9 +116,10 @@ func TestMigrationsWithoutRollbacksResultsInAnError(t *testing.T) {
 	os.Create(fmt.Sprintf("%s/1_my-first-migration_up.sql", config.MigrationsDir))
 	os.Create(fmt.Sprintf("%s/fake-rollback.sql", config.RollbacksDir))
 
-	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
+	m := NewConfiguredMigrator(config, mock.WorkingMockDatabaseServicer(), mock.MockLogServicer())
 	err := m.Migrate()
 	if _, ok := err.(migrator.ErrMissingRollbackFile); !ok {
+		fmt.Println(err)
 		t.Errorf("error returned was not correct")
 	}
 }

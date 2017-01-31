@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -22,33 +23,33 @@ func main() {
 	migrateCommand.StringVar(&migDir, "migration-dir", "", "The directory where the migration scripts are stored.")
 	migrateCommand.StringVar(&rolDir, "rollback-dir", "", "The directory where the rollback scripts are stored.")
 
+	// There are currently two commands: migrate and rollback.
 	switch os.Args[1] {
 	case "migrate":
 		migrateCommand.Parse(os.Args[2:])
 	}
 
+	var db migrator.DatabaseServicer
+	var err error
 	config := migrator.Configuration{
 		DatabaseConnectionString: conString,
 		MigrationsDir:            migDir,
 		RollbacksDir:             rolDir,
 	}
-
 	logger := log.New(os.Stdout, "[Migrator] ", 1)
 
-	var db migrator.DatabaseServicer
-	var err error
 	switch strings.ToLower(dbType) {
 	case "mysql":
 		db, err = mysql.NewMySQLDatabaseServicer(config.DatabaseConnectionString)
 		break
 	}
 	if err != nil {
-		logger.Printf("database initialisation error: %e", err)
+		panic("unable to initialise database servicer")
 	}
 
 	m, err := migrator.NewMigrator(config, db, logger)
 	if err != nil {
-		logger.Printf("error creating migrator instance: %s\n", err)
+		panic(fmt.Sprintf("error creating migrator instance: %s\n", err))
 	}
 
 	if err := m.Migrate(); err != nil {
