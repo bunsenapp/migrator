@@ -109,6 +109,21 @@ func TestNoRollbacksResultsInAnError(t *testing.T) {
 	}
 }
 
+func TestErrorWhilstGettingRanMigrationsResultsInAnError(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
+		return nil, errors.New("boo")
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	if err := m.Migrate(); err == nil || err != migrator.ErrUnableToRetrieveRanMigrations {
+		t.Errorf("error returned was not correct")
+	}
+}
+
 func TestMigrationsWithoutRollbacksResultsInAnError(t *testing.T) {
 	config, cleanUp := mock.ValidConfigurationAndDirectories()
 	defer cleanUp()
@@ -133,7 +148,7 @@ func TestMigrationsWithAnInvalidIdResultsInAnError(t *testing.T) {
 
 	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
 	err := m.Migrate()
-	if _, ok := err.(migrator.ErrInvalidMigrationId); !ok {
+	if _, ok := err.(migrator.ErrInvalidMigrationID); !ok {
 		t.Errorf("error returned was not correct")
 	}
 }
@@ -265,6 +280,21 @@ func TestIfMigrationHasNotBeenDeployedItIsRanIn(t *testing.T) {
 	}
 }
 
+func TestCommitErrorIsReturned(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.CommitTransactionFunc = func() error {
+		return errors.New("foo")
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	if err := m.Migrate(); err == nil || err.Error() != "foo" {
+		t.Errorf("migration was not ran when it should have been")
+	}
+}
+
 func TestErrorDuringMigrationRunIsReturned(t *testing.T) {
 	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
 	defer cleanUp()
@@ -304,7 +334,56 @@ func TestErrorDuringMigrationRunResultsInTransactionBeingRolledBack(t *testing.T
 }
 
 func TestYouCannotRollbackANotLatestMigration(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
+		return []migrator.RanMigration{
+			migrator.RanMigration{
+				ID: 1,
+			},
+			migrator.RanMigration{
+				ID: 2,
+			},
+		}, nil
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	err := m.Rollback("1_first-migration_up.sql")
+	if err == nil || err != migrator.ErrNotLatestMigration {
+		t.Errorf("error was not returned when it should have been")
+	}
 }
 
 func TestYouCanRollbackTheLatestMigration(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	migrationRolledBack := false
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
+		return []migrator.RanMigration{
+			migrator.RanMigration{
+				ID: 1,
+			},
+		}, nil
+	}
+	db.RollbackMigrationFunc = func(m migrator.Migration) error {
+		migrationRolledBack = true
+		return nil
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	m.Rollback("1_first-migration_up.sql")
+	if !migrationRolledBack {
+		t.Errorf("migration was not rolled back successfully")
+	}
+}
+
+func TestAnErrorWhilstRollingBackTheMigrationResultsInTheErrorBeingReturned(t *testing.T) {
+}
+
+func TestAnErrorWhilstRollingBackTheMigrationResultsInTheTransactionBeingRolledBack(t *testing.T) {
 }

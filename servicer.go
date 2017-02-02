@@ -17,6 +17,10 @@ type DatabaseServicer interface {
 	// and rolls it back, ensuring there are no changes to the database made.
 	RollbackTransaction() error
 
+	// RollbackMigration rolls back the specified migration and removes it
+	// from the RanMigrations table.
+	RollbackMigration(m Migration) error
+
 	// RunMigration runs the specified migration against the current database.
 	RunMigration(m Migration) error
 

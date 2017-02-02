@@ -34,6 +34,10 @@ func (db mysqlDbServicer) RanMigrations() ([]migrator.RanMigration, error) {
 	return nil, nil
 }
 
+func (db mysqlDbServicer) RollbackMigration(m migrator.Migration) error {
+	return nil
+}
+
 func (db mysqlDbServicer) TryCreateHistoryTable() (bool, error) {
 	return false, nil
 }

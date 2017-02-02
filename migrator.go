@@ -11,18 +11,18 @@ import (
 )
 
 const (
-	// MySQL represents a MySQL database type.
+	// MySQLDatabaseType represents a MySQL database type.
 	MySQLDatabaseType = iota
 
-	// PostgreSQL represents a PostgreSQL database type.
+	// PostgreSQLDatabaseType represents a PostgreSQL database type.
 	PostgreSQLDatabaseType
 )
 
 // Migration is a representation of a migration that needs to run.
 type Migration struct {
-	// Id represents where the migration is in the order of those to be
+	// ID represents where the migration is in the order of those to be
 	// completed.
-	Id int
+	ID int
 
 	// FileName is the file name of the migration.
 	FileName string
@@ -38,8 +38,8 @@ type Migration struct {
 // RanMigration is a representation of a migration that was previously ran
 // into the database.
 type RanMigration struct {
-	// Id is the identifier of the migration that was ran.
-	Id int
+	// ID is the identifier of the migration that was ran.
+	ID int
 
 	// FileName is the name of the migration.
 	FileName string
@@ -113,19 +113,18 @@ type Migrator struct {
 
 // Migrate migrates all available migrations.
 func (m Migrator) Migrate() error {
-	migrationFiles, err := m.bootstrapMigrator()
+	var err error
+	var migrationFiles []Migration
+	var ranMigrations []RanMigration
+
+	migrationFiles, ranMigrations, err = m.bootstrapMigrator()
 	if err != nil {
 		return err
 	}
 
-	ranMigrations, err := m.DatabaseServicer.RanMigrations()
-	if err != nil {
-		return ErrUnableToRetrieveRanMigrations
-	}
-
 	for _, migration := range migrationFiles {
 		if !migrationRan(ranMigrations, migration) {
-			err := m.DatabaseServicer.RunMigration(migration)
+			err = m.DatabaseServicer.RunMigration(migration)
 			if err != nil {
 				m.DatabaseServicer.RollbackTransaction()
 				return NewErrRunningMigration(migration, err)
@@ -145,51 +144,70 @@ func (m Migrator) Migrate() error {
 
 // Rollback rolls back a specified transaction.
 func (m Migrator) Rollback(name string) error {
-	migrationFiles, err := m.bootstrapMigrator()
+	migrationFiles, ranMigrations, err := m.bootstrapMigrator()
 	if err != nil {
 		return err
 	}
 
-	if m.Config.MigrationToRollback != "" {
+	if name != "" {
 		var toRollback Migration
 
+		var latestMigrationID int
+
+		for _, ranMigration := range ranMigrations {
+			if ranMigration.ID > latestMigrationID {
+				latestMigrationID = ranMigration.ID
+			}
+		}
+
 		for _, migration := range migrationFiles {
-			if migration.FileName == m.Config.MigrationToRollback {
+			if migration.FileName == name {
 				toRollback = migration
 				break
 			}
 		}
 
-		fmt.Println(toRollback)
+		if toRollback.ID != latestMigrationID {
+			return ErrNotLatestMigration
+		}
+
+		m.DatabaseServicer.RollbackMigration(toRollback)
 	}
 
 	return nil
 }
 
-func (m Migrator) bootstrapMigrator() ([]Migration, error) {
+func (m Migrator) bootstrapMigrator() ([]Migration, []RanMigration, error) {
 	var migrationFiles []Migration
+	var ranMigrations []RanMigration
 	var err error
 
-	if err := m.Config.Validate(); err != nil {
-		return migrationFiles, err
+	if err = m.Config.Validate(); err != nil {
+		return migrationFiles, ranMigrations, err
 	}
 
 	if m.DatabaseServicer == nil {
-		return migrationFiles, ErrDbServicerNotInitialised
+		return migrationFiles, ranMigrations, ErrDbServicerNotInitialised
 	}
 
 	migrationFiles, err = m.findMigrations()
 	if err != nil {
-		return migrationFiles, err
+		return migrationFiles, ranMigrations, err
+	}
+
+	ranMigrations, err = m.DatabaseServicer.RanMigrations()
+	if err != nil {
+		return migrationFiles, ranMigrations, ErrUnableToRetrieveRanMigrations
 	}
 
 	m.LogServicer.Printf("located %d migration files", len(migrationFiles))
+	m.LogServicer.Printf("located %d previously ran migrations", len(ranMigrations))
 
 	// Now we have the migration files, create the history table if it is
 	// not there already.
 	h, err := m.DatabaseServicer.TryCreateHistoryTable()
 	if err != nil {
-		return migrationFiles, NewErrCreatingHistoryTable(err)
+		return migrationFiles, ranMigrations, NewErrCreatingHistoryTable(err)
 	}
 
 	if h {
@@ -200,12 +218,12 @@ func (m Migrator) bootstrapMigrator() ([]Migration, error) {
 	sort.Sort(migrations(migrationFiles))
 
 	// Create a transaction to batch run the migrations.
-	if err := m.DatabaseServicer.BeginTransaction(); err != nil {
+	if err = m.DatabaseServicer.BeginTransaction(); err != nil {
 		m.LogServicer.Printf("database error creating transaction: %s", err)
-		return migrationFiles, ErrCreatingDbTransaction
+		return migrationFiles, ranMigrations, ErrCreatingDbTransaction
 	}
 
-	return migrationFiles, err
+	return migrationFiles, ranMigrations, err
 }
 
 func (m Migrator) findMigrations() ([]Migration, error) {
@@ -245,9 +263,9 @@ func (m Migrator) findMigrations() ([]Migration, error) {
 			return nil, err
 		}
 
-		migrationId, err := strconv.Atoi(fileNameParts[0])
+		migrationID, err := strconv.Atoi(fileNameParts[0])
 		if err != nil {
-			return nil, NewErrInvalidMigrationId(migration.Name(), err)
+			return nil, NewErrInvalidMigrationID(migration.Name(), err)
 		}
 
 		filePath := fmt.Sprintf("%s/%s", m.Config.MigrationsDir, migration.Name())
@@ -257,7 +275,7 @@ func (m Migrator) findMigrations() ([]Migration, error) {
 		}
 
 		migration := Migration{
-			Id:           migrationId,
+			ID:           migrationID,
 			FileName:     migration.Name(),
 			FileContents: file,
 			Rollback:     rollback,
@@ -318,7 +336,7 @@ func (m migrations) Len() int {
 }
 
 func (m migrations) Less(i, j int) bool {
-	return m[i].Id < m[j].Id
+	return m[i].ID < m[j].ID
 }
 
 func (m migrations) Swap(i, j int) {

@@ -8,7 +8,7 @@ import (
 var (
 	// ErrConfigurationInvalid is an error that is raised when a configuration
 	// property is invalid.
-	ErrConfigurationInvalid = errors.New("configuration of Migrator is invalid.")
+	ErrConfigurationInvalid = errors.New("configuration of Migrator is invalid")
 
 	// ErrDbServicerNotInitialised is an error that is raised when the database
 	// server on the cmd.Migration struct has not been initialised.
@@ -29,6 +29,12 @@ var (
 	// ErrCreatingDbTransaction is an error that is raised when the application
 	// is unable to create a transaction in the database.
 	ErrCreatingDbTransaction = errors.New("unable to create database transaction")
+
+	// ErrNotLatestMigration is an error that is raised when the user
+	// tries to rollback a migration which is not the latest migration. This
+	// was explicitly designed in this way to ensure the user has knowledge
+	// of every single migration that they are rolling back.
+	ErrNotLatestMigration = errors.New("cannot rollback a not-latest migration")
 )
 
 // NewErrSearchingDir creates a new instance of the ErrSearchingDir struct.
@@ -47,10 +53,10 @@ func NewErrMissingRollbackFile(file string) error {
 	}
 }
 
-// NewErrInvalidMigrationId creates a new instance of the ErrInvalidMigrationId
+// NewErrInvalidMigrationID creates a new instance of the ErrInvalidMigrationId
 // struct.
-func NewErrInvalidMigrationId(migration string, err error) error {
-	return ErrInvalidMigrationId{
+func NewErrInvalidMigrationID(migration string, err error) error {
+	return ErrInvalidMigrationID{
 		migration: migration,
 		err:       err,
 	}
@@ -105,15 +111,15 @@ func (e ErrMissingRollbackFile) Error() string {
 	return fmt.Sprintf("failed to find rollback for migration: %s", e.file)
 }
 
-// ErrInvalidMigrationId is an error that is raised when the index on a migration
+// ErrInvalidMigrationID is an error that is raised when the index on a migration
 // files does not successfully convert to an integer.
-type ErrInvalidMigrationId struct {
+type ErrInvalidMigrationID struct {
 	migration string
 	err       error
 }
 
 // Error yields the error string for the ErrInvalidMigrationId struct.
-func (e ErrInvalidMigrationId) Error() string {
+func (e ErrInvalidMigrationID) Error() string {
 	return fmt.Sprintf("invalid migration id: %s, conversion yielded error: %s", e.migration, e.err)
 }
 
