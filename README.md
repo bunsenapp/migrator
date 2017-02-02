@@ -9,6 +9,5 @@ and run the executable.
 
 Migrator has the following features:
 
-* Migration tracking, either in the database or externally.
 * Configurable, flexible structure.
 * Write your database migrations using the language you're supposed to: SQL.
