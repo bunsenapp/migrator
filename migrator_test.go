@@ -290,7 +290,7 @@ func TestCommitErrorIsReturned(t *testing.T) {
 	}
 
 	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
-	if err := m.Migrate(); err == nil || err.Error() != "foo" {
+	if err := m.Migrate(); err == nil || err != migrator.ErrCommittingTransaction {
 		t.Errorf("migration was not ran when it should have been")
 	}
 }
@@ -382,8 +382,83 @@ func TestYouCanRollbackTheLatestMigration(t *testing.T) {
 	}
 }
 
+func TestSuccessfulMigrationRollbackResultsInTheTransactionBeingCommitted(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	transactionCommitted := false
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.CommitTransactionFunc = func() error {
+		transactionCommitted = true
+		return nil
+	}
+	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
+		return []migrator.RanMigration{
+			migrator.RanMigration{
+				ID: 1,
+			},
+		}, nil
+	}
+	db.RollbackMigrationFunc = func(m migrator.Migration) error {
+		return nil
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	m.Rollback("1_first-migration_up.sql")
+	if !transactionCommitted {
+		t.Errorf("database transaction was not committed")
+	}
+}
+
 func TestAnErrorWhilstRollingBackTheMigrationResultsInTheErrorBeingReturned(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
+		return []migrator.RanMigration{
+			migrator.RanMigration{
+				ID: 1,
+			},
+		}, nil
+	}
+	db.RollbackMigrationFunc = func(m migrator.Migration) error {
+		return errors.New("foo")
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	err := m.Rollback("1_first-migration_up.sql")
+	if _, ok := err.(migrator.ErrRunningRollback); !ok {
+		t.Errorf("error was not returned when it should have been")
+	}
 }
 
 func TestAnErrorWhilstRollingBackTheMigrationResultsInTheTransactionBeingRolledBack(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	transactionRolledBack := false
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.RollbackTransactionFunc = func() error {
+		transactionRolledBack = true
+		return nil
+	}
+	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
+		return []migrator.RanMigration{
+			migrator.RanMigration{
+				ID: 1,
+			},
+		}, nil
+	}
+	db.RollbackMigrationFunc = func(m migrator.Migration) error {
+		return errors.New("foo")
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	m.Rollback("1_first-migration_up.sql")
+	if !transactionRolledBack {
+		t.Errorf("transaction was not rolled back when it should have been")
+	}
 }

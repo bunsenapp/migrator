@@ -35,6 +35,10 @@ var (
 	// was explicitly designed in this way to ensure the user has knowledge
 	// of every single migration that they are rolling back.
 	ErrNotLatestMigration = errors.New("cannot rollback a not-latest migration")
+
+	// ErrCommittingTransaction is an error that is raised when the application
+	// is, for some reason, unable to commit the transaction to the database.
+	ErrCommittingTransaction = errors.New("unable to commit database transaction")
 )
 
 // NewErrSearchingDir creates a new instance of the ErrSearchingDir struct.
@@ -87,6 +91,15 @@ func NewErrRunningMigration(m Migration, err error) error {
 	}
 }
 
+// NewErrRunningRollback creates a new instance of the ErrRunningRollback
+// struct.
+func NewErrRunningRollback(r Rollback, err error) error {
+	return ErrRunningRollback{
+		r:   r,
+		err: err,
+	}
+}
+
 // ErrSearchingDir is an error that is raised when the searching of a directory
 // fails.
 type ErrSearchingDir struct {
@@ -120,7 +133,8 @@ type ErrInvalidMigrationID struct {
 
 // Error yields the error string for the ErrInvalidMigrationId struct.
 func (e ErrInvalidMigrationID) Error() string {
-	return fmt.Sprintf("invalid migration id: %s, conversion yielded error: %s", e.migration, e.err)
+	return fmt.Sprintf("invalid migration id: %s, conversion yielded error: %s",
+		e.migration, e.err)
 }
 
 // ErrReadingFile is an error that is raised when the application is unable to
@@ -155,5 +169,19 @@ type ErrRunningMigration struct {
 
 // Error yields the error string for the ErrRunningMigration struct.
 func (e ErrRunningMigration) Error() string {
-	return fmt.Sprintf("error whilst running migration %s: %s", e.m.FileName, e.err)
+	return fmt.Sprintf("error whilst running migration %s: %s",
+		e.m.FileName, e.err)
+}
+
+// ErrRunningRollback is an error that is raised when the application fails to
+// run a rollback.
+type ErrRunningRollback struct {
+	r   Rollback
+	err error
+}
+
+// Error yields the error string for the ErrRunningRollback struct.
+func (e ErrRunningRollback) Error() string {
+	return fmt.Sprintf("error whilst rolling back migration %s: %s",
+		e.r.FileName, e.err)
 }

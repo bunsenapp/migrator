@@ -89,11 +89,11 @@ func (c Configuration) Validate() error {
 // NewMigrator initialises a set up migrator that can be used without having
 // to manually construct dependencies. You must inject a LogServicer implementation
 // into this function. You will be able to use most logging libraries with it.
-func NewMigrator(config Configuration, db DatabaseServicer, logger LogServicer) (Migrator, error) {
+func NewMigrator(c Configuration, db DatabaseServicer, l LogServicer) (Migrator, error) {
 	return Migrator{
-		Config:           config,
+		Config:           c,
 		DatabaseServicer: db,
-		LogServicer:      logger,
+		LogServicer:      l,
 	}, nil
 }
 
@@ -122,11 +122,12 @@ func (m Migrator) Migrate() error {
 		return err
 	}
 
+	defer m.DatabaseServicer.RollbackTransaction()
+
 	for _, migration := range migrationFiles {
 		if !migrationRan(ranMigrations, migration) {
 			err = m.DatabaseServicer.RunMigration(migration)
 			if err != nil {
-				m.DatabaseServicer.RollbackTransaction()
 				return NewErrRunningMigration(migration, err)
 			}
 
@@ -136,8 +137,10 @@ func (m Migrator) Migrate() error {
 
 	err = m.DatabaseServicer.CommitTransaction()
 	if err != nil {
-		return err
+		return ErrCommittingTransaction
 	}
+
+	m.LogServicer.Printf("committed database transaction")
 
 	return nil
 }
@@ -148,6 +151,8 @@ func (m Migrator) Rollback(name string) error {
 	if err != nil {
 		return err
 	}
+
+	defer m.DatabaseServicer.RollbackTransaction()
 
 	if name != "" {
 		var toRollback Migration
@@ -171,8 +176,18 @@ func (m Migrator) Rollback(name string) error {
 			return ErrNotLatestMigration
 		}
 
-		m.DatabaseServicer.RollbackMigration(toRollback)
+		err = m.DatabaseServicer.RollbackMigration(toRollback)
+		if err != nil {
+			return NewErrRunningRollback(toRollback.Rollback, err)
+		}
 	}
+
+	err = m.DatabaseServicer.CommitTransaction()
+	if err != nil {
+		return ErrCommittingTransaction
+	}
+
+	m.LogServicer.Printf("committed database transaction")
 
 	return nil
 }
@@ -201,7 +216,8 @@ func (m Migrator) bootstrapMigrator() ([]Migration, []RanMigration, error) {
 	}
 
 	m.LogServicer.Printf("located %d migration files", len(migrationFiles))
-	m.LogServicer.Printf("located %d previously ran migrations", len(ranMigrations))
+	m.LogServicer.Printf("located %d previously ran migrations",
+		len(ranMigrations))
 
 	// Now we have the migration files, create the history table if it is
 	// not there already.
@@ -222,6 +238,8 @@ func (m Migrator) bootstrapMigrator() ([]Migration, []RanMigration, error) {
 		m.LogServicer.Printf("database error creating transaction: %s", err)
 		return migrationFiles, ranMigrations, ErrCreatingDbTransaction
 	}
+
+	m.LogServicer.Printf("database transaction created")
 
 	return migrationFiles, ranMigrations, err
 }
