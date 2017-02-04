@@ -131,6 +131,11 @@ func (m Migrator) Migrate() error {
 				return NewErrRunningMigration(migration, err)
 			}
 
+			err = m.DatabaseServicer.WriteMigrationHistory(migration)
+			if err != nil {
+				return NewErrRunningMigration(migration, err)
+			}
+
 			m.LogServicer.Printf("migrated %s", migration.FileName)
 		}
 	}
@@ -180,6 +185,8 @@ func (m Migrator) Rollback(name string) error {
 		if err != nil {
 			return NewErrRunningRollback(toRollback.Rollback, err)
 		}
+
+		m.LogServicer.Printf("rolled back %s", toRollback.FileName)
 	}
 
 	err = m.DatabaseServicer.CommitTransaction()
@@ -205,6 +212,17 @@ func (m Migrator) bootstrapMigrator() ([]Migration, []RanMigration, error) {
 		return migrationFiles, ranMigrations, ErrDbServicerNotInitialised
 	}
 
+	// First thing that needs to be done is to create the migration history
+	// table.
+	h, err := m.DatabaseServicer.TryCreateHistoryTable()
+	if err != nil {
+		return migrationFiles, ranMigrations, NewErrCreatingHistoryTable(err)
+	}
+
+	if h {
+		m.LogServicer.Printf("created migration history table")
+	}
+
 	migrationFiles, err = m.findMigrations()
 	if err != nil {
 		return migrationFiles, ranMigrations, err
@@ -218,17 +236,6 @@ func (m Migrator) bootstrapMigrator() ([]Migration, []RanMigration, error) {
 	m.LogServicer.Printf("located %d migration files", len(migrationFiles))
 	m.LogServicer.Printf("located %d previously ran migrations",
 		len(ranMigrations))
-
-	// Now we have the migration files, create the history table if it is
-	// not there already.
-	h, err := m.DatabaseServicer.TryCreateHistoryTable()
-	if err != nil {
-		return migrationFiles, ranMigrations, NewErrCreatingHistoryTable(err)
-	}
-
-	if h {
-		m.LogServicer.Printf("created migration history table")
-	}
 
 	// Sort the migration files by their ids.
 	sort.Sort(migrations(migrationFiles))

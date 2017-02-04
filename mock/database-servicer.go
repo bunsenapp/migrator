@@ -27,6 +27,9 @@ func WorkingMockDatabaseServicer() MockDatabaseServicer {
 		TryCreateHistoryTableFunc: func() (bool, error) {
 			return true, nil
 		},
+		WriteMigrationHistoryFunc: func(m migrator.Migration) error {
+			return nil
+		},
 	}
 }
 
@@ -58,6 +61,10 @@ type RunMigrationFunc func(m migrator.Migration) error
 // to be returned from the TryCreateHistoryTable call.
 type TryCreateHistoryTableFunc func() (bool, error)
 
+// WriteMigrationHistoryFunc is a function type that allows custom responses
+// to be returned from the WriteMigrationHistory call.
+type WriteMigrationHistoryFunc func(m migrator.Migration) error
+
 // MockDatabaseServicer is a mocked implementation of the DatabaseServicer
 // interface.
 type MockDatabaseServicer struct {
@@ -68,6 +75,7 @@ type MockDatabaseServicer struct {
 	RollbackTransactionFunc   RollbackTransactionFunc
 	RunMigrationFunc          RunMigrationFunc
 	TryCreateHistoryTableFunc TryCreateHistoryTableFunc
+	WriteMigrationHistoryFunc WriteMigrationHistoryFunc
 }
 
 // BeginTransaction creates a fake database transaction.
@@ -104,4 +112,10 @@ func (m MockDatabaseServicer) RunMigration(mi migrator.Migration) error {
 // the migration history table.
 func (m MockDatabaseServicer) TryCreateHistoryTable() (bool, error) {
 	return m.TryCreateHistoryTableFunc()
+}
+
+// WriteMigrationHistory fakes the method call that will write a migration
+// to the migration history table.
+func (m MockDatabaseServicer) WriteMigrationHistory(mi migrator.Migration) error {
+	return m.WriteMigrationHistoryFunc(mi)
 }

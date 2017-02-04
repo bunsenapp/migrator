@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/bunsenapp/migrator"
 	_ "github.com/go-sql-driver/mysql"
@@ -15,37 +16,121 @@ func NewMySQLDatabaseServicer(cs string) (migrator.DatabaseServicer, error) {
 		return nil, err
 	}
 
-	return mysqlDbServicer{db: db}, nil
+	return mysql{db: db}, nil
 }
 
-type mysqlDbServicer struct {
+type mysql struct {
 	db *sql.DB
 }
 
-func (db mysqlDbServicer) RunMigration(m migrator.Migration) error {
+func (m mysql) RunMigration(mi migrator.Migration) error {
+	_, err := m.db.Exec(string(mi.FileContents))
+	if err != nil {
+		return err
+	}
+
+	// Add this migration to the history table.
 	return nil
 }
 
-func (db mysqlDbServicer) BeginTransaction() error {
+func (m mysql) BeginTransaction() error {
+	_, err := m.db.Exec("START TRANSACTION")
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (db mysqlDbServicer) RanMigrations() ([]migrator.RanMigration, error) {
-	return nil, nil
+func (m mysql) RanMigrations() ([]migrator.RanMigration, error) {
+	var ranMigrations []migrator.RanMigration
+
+	rows, err := m.db.Query(`
+		SELECT Id, FileName, Ran
+		FROM MigrationHistory
+	`)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var rm migrator.RanMigration
+
+		err = rows.Scan(&rm.ID, &rm.FileName, &rm.Ran)
+		if err != nil {
+			return nil, err
+		}
+
+		ranMigrations = append(ranMigrations, rm)
+	}
+
+	return ranMigrations, nil
 }
 
-func (db mysqlDbServicer) RollbackMigration(m migrator.Migration) error {
+func (db mysql) RollbackMigration(m migrator.Migration) error {
 	return nil
 }
 
-func (db mysqlDbServicer) TryCreateHistoryTable() (bool, error) {
-	return false, nil
+func (m mysql) TryCreateHistoryTable() (bool, error) {
+	// See if object already exists.
+	rows, err := m.db.Query("SHOW TABLES LIKE 'MigrationHistory'")
+	if err != nil {
+		return false, err
+	}
+
+	var resultsFound bool
+
+	for rows.Next() {
+		resultsFound = true
+		break
+	}
+
+	if resultsFound {
+		return false, nil
+	}
+
+	// It obviously doesn't - needs creating.
+	_, err = m.db.Exec(`
+		CREATE TABLE MigrationHistory
+		(
+			Id		 INT NOT NULL,
+			FileName VARCHAR(255) NOT NULL,
+			Ran		 DATETIME NOT NULL
+		)
+	`)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
-func (db mysqlDbServicer) CommitTransaction() error {
+func (m mysql) CommitTransaction() error {
+	_, err := m.db.Exec("COMMIT")
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (db mysqlDbServicer) RollbackTransaction() error {
+func (m mysql) RollbackTransaction() error {
+	_, err := m.db.Exec("ROLLBACK")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m mysql) WriteMigrationHistory(m migrator.Migration) error {
+	_, err = m.db.Exec(`
+		INSERT INTO MigrationHistory (Id, FileName, Ran)
+		VALUES (?, ?, ?)
+	`, mi.ID, mi.FileName, time.Now())
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

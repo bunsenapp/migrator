@@ -28,6 +28,10 @@ type DatabaseServicer interface {
 	// not already exist. The boolean return value indicates whether or not
 	// the table had to be created.
 	TryCreateHistoryTable() (bool, error)
+
+	// WriteMigrationHistory writes that a migration has been ran into the
+	// migration history table.
+	WriteMigrationHistory(m Migration) error
 }
 
 // LogServicer abstracts common logging functions so we do not have to

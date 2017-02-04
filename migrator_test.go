@@ -62,7 +62,7 @@ func TestNotInitialisedDatabaseServicerResultsInError(t *testing.T) {
 func TestErrorWhilstGettingFilesFromMigrationDirIsReturned(t *testing.T) {
 	config := mock.ValidConfiguration()
 
-	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
+	m := NewConfiguredMigrator(config, mock.WorkingMockDatabaseServicer(), mock.MockLogServicer())
 	err := m.Migrate()
 	if _, ok := err.(migrator.ErrSearchingDir); !ok {
 		t.Errorf("error returned was not correct")
@@ -79,7 +79,7 @@ func TestErrorWhilstGettingFilesFromRollbackDirIsReturned(t *testing.T) {
 
 	os.Create("migrationDirTest/1_test_up.sql")
 
-	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
+	m := NewConfiguredMigrator(config, mock.WorkingMockDatabaseServicer(), mock.MockLogServicer())
 	err := m.Migrate()
 	if _, ok := err.(migrator.ErrSearchingDir); !ok {
 		t.Errorf("error returned was not correct")
@@ -90,7 +90,7 @@ func TestNoMigrationsResultsInAnError(t *testing.T) {
 	config, cleanUp := mock.ValidConfigurationAndDirectories()
 	defer cleanUp()
 
-	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
+	m := NewConfiguredMigrator(config, mock.WorkingMockDatabaseServicer(), mock.MockLogServicer())
 	if err := m.Migrate(); err == nil || err != migrator.ErrNoMigrationsInDir {
 		t.Errorf("error returned was not correct")
 	}
@@ -102,7 +102,7 @@ func TestNoRollbacksResultsInAnError(t *testing.T) {
 
 	os.Create(fmt.Sprintf("%s/1_test_up.sql", config.MigrationsDir))
 
-	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
+	m := NewConfiguredMigrator(config, mock.WorkingMockDatabaseServicer(), mock.MockLogServicer())
 	if err := m.Migrate(); err == nil || err != migrator.ErrNoRollbacksInDir {
 		fmt.Println(err)
 		t.Errorf("error returned was not correct")
@@ -146,7 +146,7 @@ func TestMigrationsWithAnInvalidIdResultsInAnError(t *testing.T) {
 	os.Create(fmt.Sprintf("%s/foo_my-first-migration_up.sql", config.MigrationsDir))
 	os.Create(fmt.Sprintf("%s/foo_my-first-migration_down.sql", config.RollbacksDir))
 
-	m := NewConfiguredMigrator(config, mock.MockDatabaseServicer{}, mock.MockLogServicer())
+	m := NewConfiguredMigrator(config, mock.WorkingMockDatabaseServicer(), mock.MockLogServicer())
 	err := m.Migrate()
 	if _, ok := err.(migrator.ErrInvalidMigrationID); !ok {
 		t.Errorf("error returned was not correct")
@@ -280,6 +280,26 @@ func TestIfMigrationHasNotBeenDeployedItIsRanIn(t *testing.T) {
 	}
 }
 
+func TestWhenMigrationIsSuccessfullyRanInTheMigrationIsWrittenToHistoryTable(t *testing.T) {
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	var migrationHistoryWritten bool
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.WriteMigrationHistoryFunc = func(m migrator.Migration) error {
+		migrationHistoryWritten = true
+		return nil
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	m.Migrate()
+
+	if !migrationHistoryWritten {
+		t.Errorf("history was not written into the database")
+	}
+}
+
 func TestCommitErrorIsReturned(t *testing.T) {
 	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
 	defer cleanUp()
@@ -380,6 +400,10 @@ func TestYouCanRollbackTheLatestMigration(t *testing.T) {
 	if !migrationRolledBack {
 		t.Errorf("migration was not rolled back successfully")
 	}
+}
+
+func TestAfterRollingBackAMigrationItIsRemovedFromTheHistoryTable(t *testing.T) {
+	t.Errorf("foo")
 }
 
 func TestSuccessfulMigrationRollbackResultsInTheTransactionBeingCommitted(t *testing.T) {
