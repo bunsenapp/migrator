@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/bunsenapp/migrator"
+
+	// Import the required MySQL driver.
 	_ "github.com/go-sql-driver/mysql"
 )
 

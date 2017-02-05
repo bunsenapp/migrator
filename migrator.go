@@ -31,7 +31,7 @@ type Migration struct {
 	FileContents []byte
 
 	// Rollback is the rollback file for the current migration. There must
-	// always be one; otherwise an error will occurr.
+	// always be one; otherwise an error will occur.
 	Rollback Rollback
 }
 

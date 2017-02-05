@@ -101,7 +101,7 @@ func (m MockDatabaseServicer) RanMigrations() ([]migrator.RanMigration, error) {
 	return m.RanMigrationsFunc()
 }
 
-// RemoveMigrationHistoryFunc fakes the removal of a specified migration.
+// RemoveMigrationHistory fakes the removal of a specified migration.
 func (m MockDatabaseServicer) RemoveMigrationHistory(mi migrator.Migration) error {
 	return m.RemoveMigrationHistoryFunc(mi)
 }
