@@ -86,7 +86,6 @@ You can also use the library by following the below steps:
 2. Go get your chosen database driver (for MySQL: `go get github.com/bunsenapp/migrator/mysql`)
 3. Import it within your application.
 4. Create an instance of the Configuration struct, setting the appropriate values:
-
 ```
     config := migrator.Configuration{
 		DatabaseConnectionString: "connection-string",
@@ -95,14 +94,10 @@ You can also use the library by following the below steps:
 		MigrationToRollback: "1_test_up.sql", // Only required if you are executing a rollback
 	}
 ```
-
 5. Create a logging instance that implements the `migrator.LogServicer` interface.
 6. Call the NewMigrator function with the required parameters
-
 `migrator := migrator.NewMigrator(config, mysql.NewMySQLDatabaseServicer(config.DatabaseConnectionString, logImplementation)`
-
 7. Call the appropriate method on the Migrator struct:
-
 ```
     migrator.Migrate()
 	
