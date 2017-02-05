@@ -12,7 +12,7 @@ import (
 )
 
 const helpText = `
-Usage: migrator COMMAND [OPTIONS]
+Usage: migrator COMMAND [OPTIONS] [MIGRATION FILE NAME TO ROLLBACK]
 
 A super simple tool to run database migrations.
 
@@ -50,7 +50,6 @@ func main() {
 	rollbackCommand.StringVar(&conString, "connection-string", ".", "The connection string of the database to run the migrations on")
 	rollbackCommand.StringVar(&migDir, "migration-dir", "migrations/up", "The directory where the migration scripts are stored.")
 	rollbackCommand.StringVar(&rolDir, "rollback-dir", "migrations/down", "The directory where the rollback scripts are stored.")
-	rollbackCommand.StringVar(&rollbackFile, "migration-to-rollback", ".", "The migration to roll back (i.e. 1_test_up.sql)")
 
 	if len(os.Args) <= 2 {
 		fmt.Println(helpText)
@@ -63,6 +62,7 @@ func main() {
 		migrateCommand.Parse(os.Args[2:])
 	case "rollback":
 		rollbackCommand.Parse(os.Args[2:])
+		rollbackFile = os.Args[len(os.Args)-1]
 	default:
 		fmt.Println(helpText)
 		return
