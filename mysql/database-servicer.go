@@ -48,8 +48,8 @@ func (m mysql) RanMigrations() ([]migrator.RanMigration, error) {
 	var ranMigrations []migrator.RanMigration
 
 	rows, err := m.db.Query(`
-		SELECT Id, FileName, Ran
-		FROM MigrationHistory
+		SELECT id, file_name, ran
+		FROM migration_history
 	`)
 	if err != nil {
 		return nil, err
@@ -71,9 +71,9 @@ func (m mysql) RanMigrations() ([]migrator.RanMigration, error) {
 
 func (m mysql) RemoveMigrationHistory(mi migrator.Migration) error {
 	_, err := m.db.Exec(`
-		DELETE MigrationHistory
-		FROM MigrationHistory
-		WHERE Id = ?`, mi.ID)
+		DELETE migration_history
+		FROM migration_history
+		WHERE id = ?`, mi.ID)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func (m mysql) RollbackMigration(mi migrator.Migration) error {
 
 func (m mysql) TryCreateHistoryTable() (bool, error) {
 	// See if object already exists.
-	rows, err := m.db.Query("SHOW TABLES LIKE 'MigrationHistory'")
+	rows, err := m.db.Query("SHOW TABLES LIKE 'migration_history'")
 	if err != nil {
 		return false, err
 	}
@@ -110,11 +110,11 @@ func (m mysql) TryCreateHistoryTable() (bool, error) {
 
 	// It obviously doesn't - needs creating.
 	_, err = m.db.Exec(`
-		CREATE TABLE MigrationHistory
+		CREATE TABLE migration_history
 		(
-			Id		 INT NOT NULL,
-			FileName VARCHAR(255) NOT NULL,
-			Ran		 DATETIME NOT NULL
+			id		 INT NOT NULL,
+			file_name VARCHAR(255) NOT NULL,
+			ran		 DATETIME NOT NULL
 		)`)
 	if err != nil {
 		return false, err
@@ -143,7 +143,7 @@ func (m mysql) RollbackTransaction() error {
 
 func (m mysql) WriteMigrationHistory(mi migrator.Migration) error {
 	_, err := m.db.Exec(`
-		INSERT INTO MigrationHistory (Id, FileName, Ran)
+		INSERT INTO migration_history (id, file_name, ran)
 		VALUES (?, ?, ?)
 	`, mi.ID, mi.FileName, time.Now())
 	if err != nil {
