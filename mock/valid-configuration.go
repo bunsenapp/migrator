@@ -36,7 +36,7 @@ func ValidConfigurationAndDirectories() (migrator.Configuration, func()) {
 	return config, cleanup
 }
 
-// ValidConfigurationAndDirectories yields a configuration object, a cleanup
+// ValidConfigurationAndDirectoriesAndFiles yields a configuration object, a cleanup
 // function, creates the required directories and also creates an up/down file
 // for a fake SQL migration.
 func ValidConfigurationDirectoriesAndFiles() (migrator.Configuration, func()) {

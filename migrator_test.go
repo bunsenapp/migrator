@@ -12,11 +12,11 @@ import (
 
 func TestInvalidConfigurationResultsInAnError(t *testing.T) {
 	invalidConfigurations := []migrator.Configuration{
-		migrator.Configuration{},
-		migrator.Configuration{
+		{},
+		{
 			DatabaseConnectionString: "MyDatabaseConnectionString",
 		},
-		migrator.Configuration{
+		{
 			DatabaseConnectionString: "MyDatabaseConnectionString",
 			MigrationsDir:            "MyMigrationsDirectory"},
 	}
@@ -203,7 +203,7 @@ func TestIfMigrationHasAlreadyBeenDeployedItIsNotRanInAgain(t *testing.T) {
 	}
 	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
 		return []migrator.RanMigration{
-			migrator.RanMigration{
+			{
 				FileName: "1_first-migration_up.sql",
 			},
 		}, nil
@@ -360,10 +360,10 @@ func TestYouCannotRollbackANotLatestMigration(t *testing.T) {
 	db := mock.WorkingMockDatabaseServicer()
 	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
 		return []migrator.RanMigration{
-			migrator.RanMigration{
+			{
 				ID: 1,
 			},
-			migrator.RanMigration{
+			{
 				ID: 2,
 			},
 		}, nil
@@ -385,7 +385,7 @@ func TestYouCanRollbackTheLatestMigration(t *testing.T) {
 	db := mock.WorkingMockDatabaseServicer()
 	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
 		return []migrator.RanMigration{
-			migrator.RanMigration{
+			{
 				ID: 1,
 			},
 		}, nil
@@ -411,7 +411,7 @@ func TestAfterRollingBackAMigrationItIsRemovedFromTheHistoryTable(t *testing.T) 
 	db := mock.WorkingMockDatabaseServicer()
 	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
 		return []migrator.RanMigration{
-			migrator.RanMigration{
+			{
 				ID: 1,
 			},
 		}, nil
@@ -441,7 +441,7 @@ func TestSuccessfulMigrationRollbackResultsInTheTransactionBeingCommitted(t *tes
 	}
 	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
 		return []migrator.RanMigration{
-			migrator.RanMigration{
+			{
 				ID: 1,
 			},
 		}, nil
@@ -464,7 +464,7 @@ func TestAnErrorWhilstRollingBackTheMigrationResultsInTheErrorBeingReturned(t *t
 	db := mock.WorkingMockDatabaseServicer()
 	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
 		return []migrator.RanMigration{
-			migrator.RanMigration{
+			{
 				ID: 1,
 			},
 		}, nil
@@ -493,7 +493,7 @@ func TestAnErrorWhilstRollingBackTheMigrationResultsInTheTransactionBeingRolledB
 	}
 	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
 		return []migrator.RanMigration{
-			migrator.RanMigration{
+			{
 				ID: 1,
 			},
 		}, nil
