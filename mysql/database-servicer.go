@@ -67,7 +67,24 @@ func (m mysql) RanMigrations() ([]migrator.RanMigration, error) {
 	return ranMigrations, nil
 }
 
-func (db mysql) RollbackMigration(m migrator.Migration) error {
+func (m mysql) RemoveMigrationHistory(mi migrator.Migration) error {
+	_, err := m.db.Exec(`
+		DELETE MigrationHistory
+		FROM MigrationHistory
+		WHERE Id = ?`, mi.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m mysql) RollbackMigration(mi migrator.Migration) error {
+	_, err := m.db.Exec(string(mi.Rollback.FileContents))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -96,8 +113,7 @@ func (m mysql) TryCreateHistoryTable() (bool, error) {
 			Id		 INT NOT NULL,
 			FileName VARCHAR(255) NOT NULL,
 			Ran		 DATETIME NOT NULL
-		)
-	`)
+		)`)
 	if err != nil {
 		return false, err
 	}
@@ -123,8 +139,8 @@ func (m mysql) RollbackTransaction() error {
 	return nil
 }
 
-func (m mysql) WriteMigrationHistory(m migrator.Migration) error {
-	_, err = m.db.Exec(`
+func (m mysql) WriteMigrationHistory(mi migrator.Migration) error {
+	_, err := m.db.Exec(`
 		INSERT INTO MigrationHistory (Id, FileName, Ran)
 		VALUES (?, ?, ?)
 	`, mi.ID, mi.FileName, time.Now())

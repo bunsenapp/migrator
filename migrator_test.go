@@ -403,7 +403,29 @@ func TestYouCanRollbackTheLatestMigration(t *testing.T) {
 }
 
 func TestAfterRollingBackAMigrationItIsRemovedFromTheHistoryTable(t *testing.T) {
-	t.Errorf("foo")
+	config, cleanUp := mock.ValidConfigurationDirectoriesAndFiles()
+	defer cleanUp()
+
+	var historyRemoved bool
+
+	db := mock.WorkingMockDatabaseServicer()
+	db.RanMigrationsFunc = func() ([]migrator.RanMigration, error) {
+		return []migrator.RanMigration{
+			migrator.RanMigration{
+				ID: 1,
+			},
+		}, nil
+	}
+	db.RemoveMigrationHistoryFunc = func(m migrator.Migration) error {
+		historyRemoved = true
+		return nil
+	}
+
+	m := NewConfiguredMigrator(config, db, mock.MockLogServicer())
+	m.Rollback("1_first-migration_up.sql")
+	if !historyRemoved {
+		t.Errorf("migration history was not removed")
+	}
 }
 
 func TestSuccessfulMigrationRollbackResultsInTheTransactionBeingCommitted(t *testing.T) {

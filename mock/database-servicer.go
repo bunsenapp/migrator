@@ -15,6 +15,9 @@ func WorkingMockDatabaseServicer() MockDatabaseServicer {
 		RanMigrationsFunc: func() ([]migrator.RanMigration, error) {
 			return []migrator.RanMigration{}, nil
 		},
+		RemoveMigrationHistoryFunc: func(m migrator.Migration) error {
+			return nil
+		},
 		RollbackTransactionFunc: func() error {
 			return nil
 		},
@@ -45,6 +48,10 @@ type CommitTransactionFunc func() error
 // returned from the RanMigrations call.
 type RanMigrationsFunc func() ([]migrator.RanMigration, error)
 
+// RemoveMigrationHistoryFunc is a function type that allows custom responses
+// to be returned from the RemoveMigrationHistory call.
+type RemoveMigrationHistoryFunc func(m migrator.Migration) error
+
 // RollbackTransactionFunc is a function type that allows custom responses to
 // be returned from the RollbackTransaction call.
 type RollbackTransactionFunc func() error
@@ -68,14 +75,15 @@ type WriteMigrationHistoryFunc func(m migrator.Migration) error
 // MockDatabaseServicer is a mocked implementation of the DatabaseServicer
 // interface.
 type MockDatabaseServicer struct {
-	BeginTransactionFunc      BeginTransactionFunc
-	CommitTransactionFunc     CommitTransactionFunc
-	RanMigrationsFunc         RanMigrationsFunc
-	RollbackMigrationFunc     RollbackMigrationFunc
-	RollbackTransactionFunc   RollbackTransactionFunc
-	RunMigrationFunc          RunMigrationFunc
-	TryCreateHistoryTableFunc TryCreateHistoryTableFunc
-	WriteMigrationHistoryFunc WriteMigrationHistoryFunc
+	BeginTransactionFunc       BeginTransactionFunc
+	CommitTransactionFunc      CommitTransactionFunc
+	RanMigrationsFunc          RanMigrationsFunc
+	RemoveMigrationHistoryFunc RemoveMigrationHistoryFunc
+	RollbackMigrationFunc      RollbackMigrationFunc
+	RollbackTransactionFunc    RollbackTransactionFunc
+	RunMigrationFunc           RunMigrationFunc
+	TryCreateHistoryTableFunc  TryCreateHistoryTableFunc
+	WriteMigrationHistoryFunc  WriteMigrationHistoryFunc
 }
 
 // BeginTransaction creates a fake database transaction.
@@ -91,6 +99,11 @@ func (m MockDatabaseServicer) CommitTransaction() error {
 // RanMigrations runs a fake migration check.
 func (m MockDatabaseServicer) RanMigrations() ([]migrator.RanMigration, error) {
 	return m.RanMigrationsFunc()
+}
+
+// RemoveMigrationHistoryFunc fakes the removal of a specified migration.
+func (m MockDatabaseServicer) RemoveMigrationHistory(mi migrator.Migration) error {
+	return m.RemoveMigrationHistoryFunc(mi)
 }
 
 // RollbackMigration runs a fake rollback on a migration.

@@ -186,6 +186,11 @@ func (m Migrator) Rollback(name string) error {
 			return NewErrRunningRollback(toRollback.Rollback, err)
 		}
 
+		err = m.DatabaseServicer.RemoveMigrationHistory(toRollback)
+		if err != nil {
+			return NewErrRunningRollback(toRollback.Rollback, err)
+		}
+
 		m.LogServicer.Printf("rolled back %s", toRollback.FileName)
 	}
 

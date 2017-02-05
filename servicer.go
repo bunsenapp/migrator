@@ -13,6 +13,10 @@ type DatabaseServicer interface {
 	// RanMigrations retrieves all previously ran migrations.
 	RanMigrations() ([]RanMigration, error)
 
+	// RemoveMigrationHistory removes the specified migration from the
+	// history table.
+	RemoveMigrationHistory(m Migration) error
+
 	// RollbackTransaction ends the created transaction providing there is one
 	// and rolls it back, ensuring there are no changes to the database made.
 	RollbackTransaction() error
