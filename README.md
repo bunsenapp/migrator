@@ -34,14 +34,14 @@ following format:
 
 where:
 
-	* ID is the order in which the migrations should be ran
-	* name is the name of your migration, it can contain any characters **other than an underscore**
-	* action is a choice of either up or down
+* ID is the order in which the migrations should be ran
+* name is the name of your migration, it can contain any characters **other than an underscore**
+* action is a choice of either up or down
 
 For example:
 
-	1_my-test-migration_up.sql - MIGRATION
-	1_my-test-migration_down.sql - ROLLBACK
+* 1_my-test-migration_up.sql - MIGRATION
+* 1_my-test-migration_down.sql - ROLLBACK
 
 ### Executable
 
@@ -87,22 +87,26 @@ You can also use the library by following the below steps:
 3. Import it within your application.
 4. Create an instance of the Configuration struct, setting the appropriate values:
 
+```
     config := migrator.Configuration{
 		DatabaseConnectionString: "connection-string",
 		MigrationsDir: "migration-dir/",
 		RollbacksDir: "rollbacks-dir/",
 		MigrationToRollback: "1_test_up.sql", // Only required if you are executing a rollback
 	}
+```
 
 5. Create a logging instance that implements the `migrator.LogServicer` interface.
 6. Call the NewMigrator function with the required parameters
 
-    migrator := migrator.NewMigrator(config, mysql.NewMySQLDatabaseServicer(config.DatabaseConnectionString, logImplementation)
+`migrator := migrator.NewMigrator(config, mysql.NewMySQLDatabaseServicer(config.DatabaseConnectionString, logImplementation)`
 
 7. Call the appropriate method on the Migrator struct:
 
+```
     migrator.Migrate()
 	
 	or
 
 	migrator.Rollback("1_test_up.sql")
+```
